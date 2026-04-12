@@ -131,13 +131,40 @@
         a { color: #c7cb00; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
-        /* Log Colors */
-        .log-error { color: #ff4444; }
-        .log-warn { color: #ffff44; }
-        .log-info { color: #ffffff; }
-        .log-meta { color: #88ff88; }
-        .log-trace { color: #888888; }
+        /* Log Colors - Matching RimWorld Console */
+        .log-error { color: #cc3333; font-weight: bold; }
+        .log-warn { color: #cccc33; font-weight: bold; }
+        .log-info { color: #dfdfdf; }
+        .log-meta { color: #44cc44; }
+        .log-trace { color: #888888; font-size: 0.95em; }
         .log-suspect { color: #55aaff; font-weight: bold; }
+        .log-rimworld-gray { color: #666666; }
+
+        .privacy-banner {
+            background: #111;
+            border: 1px solid #5a5b49;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            color: #888;
+            text-align: center;
+            border-left: 4px solid #c7cb00;
+        }
+        .online-notice {
+            color: #c7cb00;
+            font-size: 0.9em;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .warning-box {
+            background: #2a1111;
+            border: 1px solid #cc3333;
+            color: #ffaaaa;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -145,16 +172,25 @@
     <div class="header">
         <h1>Archotech Diagnostic System</h1>
         <div class="status-badge" id="status-text">Synchronizing Neural Interface...</div>
+        <div id="online-notice" class="online-notice hidden">This is a public online archive. The URL can be shared with modders or support staff.</div>
+    </div>
+
+    <div class="privacy-banner" id="privacy-general">
+        Note: Standard diagnostic logs (Session Log, Mod List, AI Report) do not contain personal data. These are safe to share publicly.
+    </div>
+
+    <div id="player-log-warning" class="warning-box">
+        <strong>SECURITY PROTOCOL ALERT:</strong> The Unity Engine Log (Player.log) can contain sensitive system information, such as your Windows username or hardware IDs. This specific log is <strong>NEVER</strong> uploaded to the online viewer automatically and should only be shared with trusted developers if specifically requested.
     </div>
 
     <div class="tabs" id="tabs-container">
         <!-- Buttons will be shown dynamically -->
-        <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced">Enhanced Log</button>
-        <button class="tab hidden" data-target="session-log" id="btn-session">Session Log</button>
-        <button class="tab hidden" data-target="trace-report" id="btn-trace">Trace Report</button>
-        <button class="tab hidden" data-target="mod-list" id="btn-mods">Mod List</button>
-        <button class="tab hidden" data-target="ai-json" id="btn-ai">AI Insights</button>
-        <button class="tab hidden" data-target="player-log" id="btn-player">Player.log</button>
+        <button class="tab hidden" data-target="session-log" id="btn-session">Raw Game Log</button>
+        <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced">Enhanced Game Log</button>
+        <button class="tab hidden" data-target="ai-json" id="btn-ai">AI Diagnostics</button>
+        <button class="tab hidden" data-target="trace-report" id="btn-trace">DS Trace Report</button>
+        <button class="tab hidden" data-target="player-log" id="btn-player">Unity Engine Log</button>
+        <button class="tab hidden" data-target="mod-list" id="btn-mods">Archotech Mod List</button>
     </div>
 
     <div id="content-container">
@@ -219,6 +255,14 @@
             const container = document.getElementById(targetId);
             if (container) container.classList.remove('hidden');
 
+            // Handle warnings
+            const playerWarn = document.getElementById('player-log-warning');
+            if (targetId === 'player-log') {
+                playerWarn.style.display = 'block';
+            } else {
+                playerWarn.style.display = 'none';
+            }
+
             currentActiveTarget = targetId;
             document.getElementById('global-copy-btn').classList.remove('hidden');
         }
@@ -254,6 +298,7 @@
                         loadedData.mod_list = data.files["MOD_LIST.json"]?.content || null;
                     }
                     statusText.innerText = `Online Diagnostic Record [${gistId}]`;
+                    document.getElementById('online-notice').classList.remove('hidden');
                     renderData();
                 } catch (err) {
                     statusText.innerHTML = `<span style="color:red">Linkage Error: ${err.message}</span>`;
@@ -278,25 +323,60 @@
             if (!text) return "";
             let escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             let lines = escaped.split('\n');
+            let result = [];
+            let currentBlockClass = null;
+
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 let lLower = line.toLowerCase();
                 
-                if (lLower.includes('error') || lLower.includes('exception')) {
-                    lines[i] = `<span class="log-error">${line}</span>`;
-                } else if (lLower.includes('warning')) {
-                    lines[i] = `<span class="log-warn">${line}</span>`;
-                } else if (line.includes('[!]') || line.includes('[H]') || line.includes('[+]')) {
-                    lines[i] = `<span class="log-meta">${line}</span>`;
-                } else if (line.includes('Suspect:')) {
-                    lines[i] = `<span class="log-suspect">${line}</span>`;
-                } else if (line.trim().startsWith('at ') || line.includes('--- STACK TRACE ---')) {
-                    lines[i] = `<span class="log-trace">${line}</span>`;
-                } else {
-                    lines[i] = `<span class="log-info">${line}</span>`;
+                // Determine block type (RimWorld style)
+                if (line.includes('[Error]') || lLower.includes('exception:')) {
+                    currentBlockClass = "log-error";
+                } else if (line.includes('[Warning]')) {
+                    currentBlockClass = "log-warn";
+                } else if (line.includes('[Message]') || line.includes('[Log]')) {
+                    currentBlockClass = "log-info";
                 }
+
+                // Enhanced Log specific markers
+                if (line.includes('[!]') || line.includes('[H]') || line.includes('[+]') || line.includes('[?]')) {
+                    result.push(`<span class="log-meta">${line}</span>`);
+                    continue;
+                }
+                
+                if (line.includes('Suspect:')) {
+                    result.push(`<span class="log-suspect">${line}</span>`);
+                    continue;
+                }
+
+                if (line.startsWith('> ') || line.startsWith('Captured:')) {
+                    // Reset class based on the line content for the raw portion
+                    if (lLower.includes('error') || lLower.includes('exception')) currentBlockClass = "log-error";
+                    else if (lLower.includes('warning')) currentBlockClass = "log-warn";
+                    else currentBlockClass = "log-info";
+                    
+                    result.push(`<span class="${currentBlockClass}">${line}</span>`);
+                    continue;
+                }
+
+                // If we are in a stack trace or follow-up text, keep the block color
+                if (line.trim().startsWith('at ') || line.includes('--- STACK TRACE ---')) {
+                    result.push(`<span class="log-trace">${line}</span>`);
+                    continue;
+                }
+
+                if (line.includes('--------------------------------------------------') || line.startsWith('===')) {
+                    result.push(`<span class="log-rimworld-gray">${line}</span>`);
+                    currentBlockClass = null; // Reset at divider
+                    continue;
+                }
+
+                // Default fallback using block class if active
+                let finalClass = currentBlockClass || "log-info";
+                result.push(`<span class="${finalClass}">${line}</span>`);
             }
-            return lines.join('\n');
+            return result.join('\n');
         }
 
         function renderData() {
@@ -317,10 +397,8 @@
                 if (!firstActive) firstActive = targetId;
             }
 
-            process(loadedData.enhanced_log, 'btn-enhanced', 'enhanced-log');
             process(loadedData.session_log, 'btn-session', 'session-log');
-            process(loadedData.trace_report, 'btn-trace', 'trace-report');
-            process(loadedData.player_log, 'btn-player', 'player-log');
+            process(loadedData.enhanced_log, 'btn-enhanced', 'enhanced-log');
 
             if (loadedData.ai_diagnostic) {
                 try {
@@ -330,6 +408,9 @@
                     if (!firstActive) firstActive = 'ai-json';
                 } catch(e){}
             }
+
+            process(loadedData.trace_report, 'btn-trace', 'trace-report');
+            process(loadedData.player_log, 'btn-player', 'player-log');
 
             if (loadedData.mod_list) {
                 try {
