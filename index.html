@@ -13,12 +13,26 @@
         }
         h1, h2, h3 {
             color: #c7cb00;
-            border-bottom: 1px solid #c7cb00;
+            border-bottom: 2px solid #333;
             padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(180deg, #111 0%, #000 100%);
+            border-bottom: 1px solid #c7cb0033;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #1a1a1a;
+            border: 1px solid #c7cb00;
+            font-size: 0.9em;
+            margin-top: 10px;
         }
         .tabs {
             display: flex;
@@ -110,7 +124,7 @@
 
     <div class="header">
         <h1>Archotech Diagnostic System</h1>
-        <p id="status-text">Loading...</p>
+        <div class="status-badge" id="status-text">Initializing Neural Bridge...</div>
     </div>
 
     <div class="tabs" id="tabs-container" class="hidden">
@@ -130,6 +144,14 @@
     </div>
     <div id="ai-json" class="content-area hidden"></div>
     <div id="player-log" class="content-area hidden"></div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <button id="copy-enhanced-log" class="tab hidden copy-btn" onclick="copyContent('enhanced-log')">Copy Enhanced Log</button>
+        <button id="copy-session-log" class="tab hidden copy-btn" onclick="copyContent('session-log')">Copy Session Log</button>
+        <button id="copy-trace-report" class="tab hidden copy-btn" onclick="copyContent('trace-report')">Copy Trace Report</button>
+        <button id="copy-ai-json" class="tab hidden copy-btn" onclick="copyContent('ai-json')">Copy AI JSON</button>
+        <button id="copy-player-log" class="tab hidden copy-btn" onclick="copyContent('player-log')">Copy Player Log</button>
+    </div>
 
     <!-- Fallback if we have local data.js -->
     <script src="data.js" onerror="window.dataJsMissing = true;"></script>
@@ -149,13 +171,31 @@
         // Tab Switching Logic
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
+                const target = e.target.dataset.target;
+                if (!target) return;
+
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
+                document.querySelectorAll('.copy-btn').forEach(b => b.classList.add('hidden'));
                 
                 e.target.classList.add('active');
-                document.getElementById(e.target.dataset.target).classList.remove('hidden');
+                document.getElementById(target).classList.remove('hidden');
+                
+                const copyBtn = document.getElementById(`copy-${target}`);
+                if (copyBtn) copyBtn.classList.remove('hidden');
             });
         });
+
+        function copyContent(id) {
+            const el = document.getElementById(id);
+            const text = el.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector(`.tab.active`);
+                const oldText = btn.innerText;
+                btn.innerText = "COPIED!";
+                setTimeout(() => btn.innerText = oldText, 2000);
+            });
+        }
 
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
