@@ -5,159 +5,192 @@
     <title>Archotech Log Viewer</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: #000000;
-            color: #c7cb00;
+            color: #6f7456;
             margin: 0;
             padding: 20px;
+            line-height: 1.4;
         }
         h1, h2, h3 {
             color: #c7cb00;
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #5a5b49;
             padding-bottom: 5px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            font-weight: 700;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
             padding: 20px;
             background: linear-gradient(180deg, #111 0%, #000 100%);
-            border-bottom: 1px solid #c7cb0033;
+            border-bottom: 1px solid #5a5b49;
         }
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
-            border-radius: 20px;
+            border-radius: 2px;
             background: #1a1a1a;
-            border: 1px solid #c7cb00;
+            border: 1px solid #5a5b49;
             font-size: 0.9em;
             margin-top: 10px;
+            color: #c7cb00;
+            text-transform: uppercase;
+            font-weight: bold;
         }
         .tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             justify-content: center;
+            flex-wrap: wrap;
         }
         .tab {
             background-color: #1a1a1a;
-            color: #c7cb00;
-            border: 1px solid #c7cb00;
+            color: #6f7456;
+            border: 1px solid #5a5b49;
             padding: 10px 20px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 12px;
         }
         .tab:hover, .tab.active {
-            background-color: #c7cb00;
-            color: #000000;
+            background-color: #6f7456;
+            color: #c7cb00;
         }
         .content-area {
-            background-color: #0f0f0f;
-            border: 1px solid #333;
+            background-color: #000000;
+            border: 1px solid #48433d;
             padding: 20px;
-            min-height: 400px;
+            min-height: 500px;
             white-space: pre-wrap;
-            font-family: Consolas, monospace;
+            font-family: 'Consolas', 'Courier New', monospace;
             overflow-x: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8);
         }
         .hidden {
             display: none !important;
         }
         
-        /* Mod List Styles */
-        .mod-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
+        /* Mod List Table Styles (Matching Old ModList.html) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #000000;
+            border: 1px solid #48433d;
         }
-        .mod-card {
-            border: 1px solid #333;
-            background: #111;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #1a1a1a;
         }
-        .mod-icon {
-            width: 40px;
-            height: 40px;
-            background: #000;
-            border: 1px solid #c7cb00;
-            object-fit: cover;
-            display: block;
-        }
-        .mod-info {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .mod-name {
+        th {
+            background: #6f7456;
+            color: #c7cb00;
             font-weight: bold;
-            font-family: 'Segoe UI', sans-serif;
+            text-transform: uppercase;
+            font-size: 11px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        tr:hover {
+            background: #111;
+        }
+        .order { color: #c7cb00; font-weight: bold; width: 40px; text-align: center; }
+        .mod-name-cell { font-weight: 600; font-size: 15px; }
+        .meta-value { font-size: 11px; color: #6f7456; opacity: 0.8; }
+        .version-tag { background: #5a5b49; color: #c7cb00; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 10px; margin-right: 4px; display: inline-block; }
+        
+        .mod-preview { width: 72px; height: 40px; border-radius: 2px; object-fit: cover; border: 1px solid #333; background: #000; }
+        .no-preview { width: 72px; height: 40px; border-radius: 2px; background: #000; border: 1px dashed #5a5b49; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #444; }
+
+        .copy-toolbar {
+            display: flex;
+            justify-content: flex-end;
             margin-bottom: 5px;
         }
-        .mod-package {
-            font-size: 0.8em;
-            color: #888;
-        }
-        .loading {
-            text-align: center;
-            font-size: 1.5em;
-            padding: 50px;
-        }
-        .error {
-            color: red;
-            border-color: red;
-        }
-        a {
+        .copy-btn {
+            background: transparent;
             color: #c7cb00;
-            text-decoration: none;
+            border: 1px solid #c7cb00;
+            padding: 4px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
         }
-        a:hover {
-            text-decoration: underline;
+        .copy-btn:hover {
+            background: #c7cb00;
+            color: #000;
         }
+
+        a { color: #c7cb00; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Log Colors */
+        .log-error { color: #ff4444; }
+        .log-warn { color: #ffff44; }
+        .log-info { color: #ffffff; }
+        .log-meta { color: #88ff88; }
+        .log-trace { color: #888888; }
+        .log-suspect { color: #55aaff; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>Archotech Diagnostic System</h1>
-        <div class="status-badge" id="status-text">Initializing Neural Bridge...</div>
+        <div class="status-badge" id="status-text">Synchronizing Neural Interface...</div>
     </div>
 
-    <div class="tabs" id="tabs-container" class="hidden">
+    <div class="tabs" id="tabs-container">
+        <!-- Buttons will be shown dynamically -->
         <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced">Enhanced Log</button>
         <button class="tab hidden" data-target="session-log" id="btn-session">Session Log</button>
-        <button class="tab hidden" data-target="trace-report" id="btn-trace">Unknown Trace</button>
+        <button class="tab hidden" data-target="trace-report" id="btn-trace">Trace Report</button>
         <button class="tab hidden" data-target="mod-list" id="btn-mods">Mod List</button>
-        <button class="tab hidden" data-target="ai-json" id="btn-ai">AI Diagnostics</button>
-        <button class="tab hidden" data-target="player-log" id="btn-player">Player.log (Local)</button>
+        <button class="tab hidden" data-target="ai-json" id="btn-ai">AI Insights</button>
+        <button class="tab hidden" data-target="player-log" id="btn-player">Player.log</button>
     </div>
 
-    <div id="enhanced-log" class="content-area hidden"></div>
-    <div id="session-log" class="content-area hidden"></div>
-    <div id="trace-report" class="content-area hidden"></div>
-    <div id="mod-list" class="content-area hidden">
-        <div class="mod-grid" id="mod-grid-container"></div>
-    </div>
-    <div id="ai-json" class="content-area hidden"></div>
-    <div id="player-log" class="content-area hidden"></div>
-    
-    <div style="text-align: center; margin-top: 20px;">
-        <button id="copy-enhanced-log" class="tab hidden copy-btn" onclick="copyContent('enhanced-log')">Copy Enhanced Log</button>
-        <button id="copy-session-log" class="tab hidden copy-btn" onclick="copyContent('session-log')">Copy Session Log</button>
-        <button id="copy-trace-report" class="tab hidden copy-btn" onclick="copyContent('trace-report')">Copy Trace Report</button>
-        <button id="copy-ai-json" class="tab hidden copy-btn" onclick="copyContent('ai-json')">Copy AI JSON</button>
-        <button id="copy-player-log" class="tab hidden copy-btn" onclick="copyContent('player-log')">Copy Player Log</button>
+    <div id="content-container">
+        <div class="copy-toolbar">
+            <button id="global-copy-btn" class="copy-btn hidden" onclick="copyActiveContent()">Copy to Clipboard</button>
+        </div>
+
+        <div id="enhanced-log" class="content-area hidden"></div>
+        <div id="session-log" class="content-area hidden"></div>
+        <div id="trace-report" class="content-area hidden"></div>
+        <div id="mod-list" class="content-area hidden">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="order">#</th>
+                        <th>Image</th>
+                        <th>Mod Name</th>
+                        <th>Package ID</th>
+                        <th>Author</th>
+                        <th>Versions</th>
+                    </tr>
+                </thead>
+                <tbody id="mod-table-body"></tbody>
+            </table>
+        </div>
+        <div id="ai-json" class="content-area hidden"></div>
+        <div id="player-log" class="content-area hidden"></div>
     </div>
 
-    <!-- Fallback if we have local data.js -->
+    <!-- Data source -->
     <script src="data.js" onerror="window.dataJsMissing = true;"></script>
     
     <script>
         const statusText = document.getElementById('status-text');
+        const activeTabClass = 'active';
+        let currentActiveTarget = null;
         
         let loadedData = {
             ai_diagnostic: null,
@@ -173,24 +206,29 @@
             tab.addEventListener('click', (e) => {
                 const target = e.target.dataset.target;
                 if (!target) return;
-
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
-                document.querySelectorAll('.copy-btn').forEach(b => b.classList.add('hidden'));
-                
-                e.target.classList.add('active');
-                document.getElementById(target).classList.remove('hidden');
-                
-                const copyBtn = document.getElementById(`copy-${target}`);
-                if (copyBtn) copyBtn.classList.remove('hidden');
+                switchTab(target);
             });
         });
 
-        function copyContent(id) {
-            const el = document.getElementById(id);
+        function switchTab(targetId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove(activeTabClass));
+            const btn = document.querySelector(`.tab[data-target="${targetId}"]`);
+            if (btn) btn.classList.add(activeTabClass);
+
+            document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
+            const container = document.getElementById(targetId);
+            if (container) container.classList.remove('hidden');
+
+            currentActiveTarget = targetId;
+            document.getElementById('global-copy-btn').classList.remove('hidden');
+        }
+
+        function copyActiveContent() {
+            if (!currentActiveTarget) return;
+            const el = document.getElementById(currentActiveTarget);
             const text = el.innerText;
             navigator.clipboard.writeText(text).then(() => {
-                const btn = document.querySelector(`.tab.active`);
+                const btn = document.getElementById('global-copy-btn');
                 const oldText = btn.innerText;
                 btn.innerText = "COPIED!";
                 setTimeout(() => btn.innerText = oldText, 2000);
@@ -202,29 +240,27 @@
             const gistId = urlParams.get('id');
 
             if (gistId) {
-                statusText.innerText = `Fetching data from GitHub Gist: ${gistId}...`;
+                statusText.innerText = `Accessing Cloud Archive (ID: ${gistId})...`;
                 try {
                     const response = await fetch(`https://api.github.com/gists/${gistId}`);
-                    if (!response.ok) throw new Error('Failed to fetch Gist');
+                    if (!response.ok) throw new Error('Archive inaccessible');
                     
                     const data = await response.json();
-                    
                     if (data.files) {
-                        if (data.files["AI_DIAGNOSTICS.json"]) loadedData.ai_diagnostic = data.files["AI_DIAGNOSTICS.json"].content;
-                        if (data.files["ENHANCED_RAW_LOG.txt"]) loadedData.enhanced_log = data.files["ENHANCED_RAW_LOG.txt"].content;
-                        if (data.files["SESSION_LOG_DUMP.txt"]) loadedData.session_log = data.files["SESSION_LOG_DUMP.txt"].content;
-                        if (data.files["UNKNOWN_TRACE_REPORT.txt"]) loadedData.trace_report = data.files["UNKNOWN_TRACE_REPORT.txt"].content;
-                        if (data.files["MOD_LIST.json"]) loadedData.mod_list = data.files["MOD_LIST.json"].content;
+                        loadedData.ai_diagnostic = data.files["AI_DIAGNOSTICS.json"]?.content || null;
+                        loadedData.enhanced_log = data.files["ENHANCED_RAW_LOG.txt"]?.content || null;
+                        loadedData.session_log = data.files["SESSION_LOG_DUMP.txt"]?.content || null;
+                        loadedData.trace_report = data.files["UNKNOWN_TRACE_REPORT.txt"]?.content || null;
+                        loadedData.mod_list = data.files["MOD_LIST.json"]?.content || null;
                     }
-                    
-                    statusText.innerText = `Online Report (ID: ${gistId})`;
+                    statusText.innerText = `Online Diagnostic Record [${gistId}]`;
                     renderData();
                 } catch (err) {
-                    statusText.innerHTML = `<span class="error">Error loading Gist: ${err.message}</span>`;
+                    statusText.innerHTML = `<span style="color:red">Linkage Error: ${err.message}</span>`;
                 }
             } else {
                 if (window.archotechLocalData) {
-                    statusText.innerText = `Local Offline Report (Loaded securely from data.js)`;
+                    statusText.innerText = `Local Diagnostic Record (Secure Handshake Success)`;
                     loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"] || null;
                     loadedData.enhanced_log = window.archotechLocalData["ENHANCED_RAW_LOG.txt"] || null;
                     loadedData.session_log = window.archotechLocalData["SESSION_LOG_DUMP.txt"] || null;
@@ -233,156 +269,118 @@
                     loadedData.player_log = window.archotechLocalData["Player.log"] || null;
                     renderData();
                 } else {
-                    statusText.innerText = `No ID provided in URL and no local data.js found.`;
+                    statusText.innerText = `Awaiting Data Input... (No Local data.js Detected)`;
                 }
             }
         }
 
         function applyColors(text) {
-            if (!text) return "No log data available.";
+            if (!text) return "";
             let escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             let lines = escaped.split('\n');
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 let lLower = line.toLowerCase();
-                if (line.includes('[Error]') || line.includes('[Exception]') || line.includes('Exception') || lLower.startsWith('error')) {
-                    lines[i] = `<span style="color: #ff5555;">${line}</span>`;
-                } else if (line.includes('[Warning]') || lLower.startsWith('warning')) {
-                    lines[i] = `<span style="color: #ffff55;">${line}</span>`;
-                } else if (line.includes('[Message]')) {
-                    lines[i] = `<span style="color: #ffffff;">${line}</span>`;
-                } else if (line.includes('--- STACK TRACE ---') || line.includes('Legend:')) {
-                    lines[i] = `<span style="color: #888888;">${line}</span>`;
-                } else if (line.trim().startsWith('at ')) {
-                    lines[i] = `<span style="color: #aaaaaa;">${line}</span>`;
-                } else if (line.includes('[!]') || line.includes('[H]') || line.includes('[+]') || line.includes('[?]')) {
-                    lines[i] = `<span style="color: #88ff88;">${line}</span>`;
-                } else if (line.startsWith('> ')) {
-                    lines[i] = `<span style="color: #cccccc;">${line}</span>`;
+                
+                if (lLower.includes('error') || lLower.includes('exception')) {
+                    lines[i] = `<span class="log-error">${line}</span>`;
+                } else if (lLower.includes('warning')) {
+                    lines[i] = `<span class="log-warn">${line}</span>`;
+                } else if (line.includes('[!]') || line.includes('[H]') || line.includes('[+]')) {
+                    lines[i] = `<span class="log-meta">${line}</span>`;
+                } else if (line.includes('Suspect:')) {
+                    lines[i] = `<span class="log-suspect">${line}</span>`;
+                } else if (line.trim().startsWith('at ') || line.includes('--- STACK TRACE ---')) {
+                    lines[i] = `<span class="log-trace">${line}</span>`;
+                } else {
+                    lines[i] = `<span class="log-info">${line}</span>`;
                 }
             }
             return lines.join('\n');
         }
 
         function renderData() {
-            let firstActive = false;
-            
-            function activateTab(btnId, targetId) {
-                document.getElementById('tabs-container').classList.remove('hidden');
-                document.getElementById(btnId).classList.remove('hidden');
-                if (!firstActive) {
-                    document.getElementById(btnId).classList.add('active');
-                    document.getElementById(targetId).classList.remove('hidden');
-                    firstActive = true;
+            let firstActive = null;
+
+            function process(data, btnId, targetId, colorize = true) {
+                if (!data) return;
+                const btn = document.getElementById(btnId);
+                btn.classList.remove('hidden');
+                
+                const area = document.getElementById(targetId);
+                if (colorize) {
+                    area.innerHTML = applyColors(data);
+                } else {
+                    area.textContent = data;
                 }
+                
+                if (!firstActive) firstActive = targetId;
             }
 
-            if (loadedData.enhanced_log) {
-                document.getElementById('enhanced-log').innerHTML = applyColors(loadedData.enhanced_log);
-                activateTab('btn-enhanced', 'enhanced-log');
-            }
-            if (loadedData.session_log) {
-                document.getElementById('session-log').innerHTML = applyColors(loadedData.session_log);
-                activateTab('btn-session', 'session-log');
-            }
-            if (loadedData.trace_report) {
-                document.getElementById('trace-report').innerHTML = applyColors(loadedData.trace_report);
-                activateTab('btn-trace', 'trace-report');
-            }
-            if (loadedData.player_log) {
-                document.getElementById('player-log').innerHTML = applyColors(loadedData.player_log);
-                activateTab('btn-player', 'player-log');
-            }
-
-            let modsSource = null;
-            if (loadedData.mod_list) {
-                try { modsSource = typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list; } catch(e){}
-            }
+            process(loadedData.enhanced_log, 'btn-enhanced', 'enhanced-log');
+            process(loadedData.session_log, 'btn-session', 'session-log');
+            process(loadedData.trace_report, 'btn-trace', 'trace-report');
+            process(loadedData.player_log, 'btn-player', 'player-log');
 
             if (loadedData.ai_diagnostic) {
                 try {
-                    let aiParsed = typeof loadedData.ai_diagnostic === 'string' ? JSON.parse(loadedData.ai_diagnostic) : loadedData.ai_diagnostic;
-                    document.getElementById('ai-json').textContent = JSON.stringify(aiParsed, null, 2);
-                    activateTab('btn-ai', 'ai-json');
-                    if (!modsSource && aiParsed.activeMods) modsSource = aiParsed;
-                } catch (e) {
-                    document.getElementById('ai-json').textContent = "Error parsing AI JSON";
-                    activateTab('btn-ai', 'ai-json');
-                }
+                    const parsed = typeof loadedData.ai_diagnostic === 'string' ? JSON.parse(loadedData.ai_diagnostic) : loadedData.ai_diagnostic;
+                    document.getElementById('ai-json').textContent = JSON.stringify(parsed, null, 2);
+                    document.getElementById('btn-ai').classList.remove('hidden');
+                    if (!firstActive) firstActive = 'ai-json';
+                } catch(e){}
             }
 
-            if (modsSource && modsSource.activeMods && Array.isArray(modsSource.activeMods)) {
-                renderModList(modsSource.activeMods);
-                activateTab('btn-mods', 'mod-list');
+            if (loadedData.mod_list) {
+                try {
+                    const modsObj = typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list;
+                    if (modsObj.activeMods) {
+                        renderModTable(modsObj.activeMods);
+                        document.getElementById('btn-mods').classList.remove('hidden');
+                        if (!firstActive) firstActive = 'mod-list';
+                    }
+                } catch(e){}
             }
-            
-            if (!firstActive) {
-                statusText.innerText = "No logs were exported in this package.";
-            }
+
+            if (firstActive) switchTab(firstActive);
         }
 
-        function renderModList(mods) {
-            const contentModGrid = document.getElementById('mod-grid-container');
-            contentModGrid.innerHTML = '';
+        function renderModTable(mods) {
+            const tbody = document.getElementById('mod-table-body');
+            tbody.innerHTML = '';
             
-            // Build the HTML initially
-            mods.forEach(mod => {
-                const id = mod.steamId;
+            mods.forEach((mod, index) => {
+                const tr = document.createElement('tr');
                 
-                const card = document.createElement('div');
-                card.className = 'mod-card';
-                
-                let iconHtml = `<div class="mod-icon"></div>`; // blank placeholder
-                let linkHtml = mod.name;
-
+                let previewHtml = `<div class="no-preview">N/A</div>`;
                 if (mod.previewImageBase64) {
-                    iconHtml = `<img class="mod-icon" src="${mod.previewImageBase64}" alt="${mod.name}" />`;
+                    previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
+                } else if (mod.steamId && mod.steamId !== "null") {
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.style.display='none'" />`;
                 }
 
-                if (id && id !== "null") {
-                    linkHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${id}" target="_blank">${mod.name}</a>`;
-                    if (!mod.previewImageBase64) {
-                        iconHtml = `<img class="mod-icon" data-steamid="${id}" alt="${mod.name}" />`;
-                    }
+                let nameHtml = mod.name;
+                if (mod.steamId && mod.steamId !== "null") {
+                    nameHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>`;
                 }
 
-                card.innerHTML = `
-                    ${iconHtml}
-                    <div class="mod-info">
-                        <div class="mod-name">[${String(mod.loadOrder).padStart(3, '0')}] ${linkHtml}</div>
-                        <div class="mod-package">${mod.packageId}</div>
-                    </div>
+                let versionsHtml = '';
+                if (mod.versions) {
+                    versionsHtml = mod.versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('');
+                }
+
+                tr.innerHTML = `
+                    <td class="order">${String(index).padStart(3, '0')}</td>
+                    <td>${previewHtml}</td>
+                    <td class="mod-name-cell">${nameHtml}</td>
+                    <td class="meta-value">${mod.packageId}</td>
+                    <td class="meta-value">${mod.authors || 'Unknown'}</td>
+                    <td>${versionsHtml}</td>
                 `;
-                contentModGrid.appendChild(card);
+                tbody.appendChild(tr);
             });
-
-            // Perform batched loading of icons
-            const imgElements = document.querySelectorAll('img[data-steamid]');
-            loadImagesInBatches(Array.from(imgElements), 100, 500);
         }
 
-        function loadImagesInBatches(images, batchSize, delay) {
-            let index = 0;
-            
-            function loadNextBatch() {
-                const batch = images.slice(index, index + batchSize);
-                if (batch.length === 0) return;
-
-                batch.forEach(img => {
-                    const sid = img.getAttribute('data-steamid');
-                    if (sid) {
-                        img.src = `https://community.cloudflare.steamstatic.com/public/images/apps/294100/${sid}.jpg`;
-                    }
-                });
-
-                index += batchSize;
-                setTimeout(loadNextBatch, delay);
-            }
-
-            loadNextBatch();
-        }
-
-        // Boot
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
