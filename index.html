@@ -401,6 +401,7 @@
             document.querySelectorAll('.content-area').forEach(c => c.classList.toggle('hidden', c.id !== id));
             document.getElementById('filter-bar').classList.toggle('hidden', id !== 'session-log' && id !== 'enhanced-log');
             currentActiveTarget = id;
+            setFilter('all'); // Ensure filters are reset upon entering a new log view
             window.scrollTo(0,0);
         }
 
@@ -415,7 +416,31 @@
         }
 
         async function init() {
-            if (window.archotechLocalData) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gistId = urlParams.get('id');
+
+            if (gistId) {
+                document.getElementById('status-text').innerText = `Linking to Cloud Diagnostic Archive [ID: ${gistId}]...`;
+                try {
+                    const response = await fetch(`https://api.github.com/gists/${gistId}`);
+                    if (!response.ok) throw new Error('Neural archive connection failed');
+                    const data = await response.json();
+                    
+                    if (data.files) {
+                        loadedData.ai_diagnostic = data.files["AI_DIAGNOSTICS.json"]?.content || null;
+                        loadedData.enhanced_log = data.files["ENHANCED_RAW_LOG.txt"]?.content || null;
+                        loadedData.session_log = data.files["SESSION_LOG_DUMP.txt"]?.content || null;
+                        loadedData.trace_report = data.files["UNKNOWN_TRACE_REPORT.txt"]?.content || null;
+                        loadedData.mod_list = data.files["MOD_LIST.json"]?.content || null;
+                        loadedData.color_legend = data.files["COLOR_LEGEND_HTML.txt"]?.content || null;
+                    }
+                    renderData();
+                    document.getElementById('status-text').innerText = `Online Diagnostic Handshake Ready [${gistId}]`;
+                    document.getElementById('online-notice').classList.remove('hidden');
+                } catch (err) {
+                    document.getElementById('status-text').innerHTML = `<span style="color:red">Archotech Linkage Failure: ${err.message}</span>`;
+                }
+            } else if (window.archotechLocalData) {
                 loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"];
                 loadedData.enhanced_log = window.archotechLocalData["ENHANCED_RAW_LOG.txt"];
                 loadedData.session_log = window.archotechLocalData["SESSION_LOG_DUMP.txt"];
@@ -424,7 +449,9 @@
                 loadedData.player_log = window.archotechLocalData["Player.log"];
                 loadedData.color_legend = window.archotechLocalData["COLOR_LEGEND_HTML.txt"];
                 renderData();
-                document.getElementById('status-text').innerText = "Local Diagnostic Record Ready.";
+                document.getElementById('status-text').innerText = "Local Neural Link Established.";
+            } else {
+                document.getElementById('status-text').innerText = "Awaiting Handshake Signals...";
             }
         }
         function toggleHelp(e) { if(e) e.stopPropagation(); document.getElementById('help-panel').classList.toggle('open'); }
