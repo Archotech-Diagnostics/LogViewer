@@ -124,6 +124,9 @@
             overflow-x: auto;
             box-shadow: 0 4px 10px rgba(0,0,0,0.8);
         }
+        #mod-list {
+            white-space: normal;
+        }
         .hidden {
             display: none !important;
         }
@@ -406,6 +409,7 @@
                 <div style="display: flex; gap: 5px;">
                     <button id="toggle-compare-btn" class="side-btn" onclick="toggleCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px;">COMPARE MODE</button>
                     <button id="close-compare-btn" class="side-btn hidden" onclick="closeCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #6f7456; color: #c7cb00;">CLOSE COMPARE</button>
+                    <button id="share-compare-btn" class="side-btn hidden" onclick="shareComparison()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #1a1a1a; color: #66e5ff;">SHARE COMPARISON</button>
                 </div>
                 
                 <div id="compare-actions" class="hidden" style="display: flex; gap: 8px; align-items: center;">
@@ -691,9 +695,15 @@
             URL.revokeObjectURL(url);
         }
 
+        let urlTab = null;
+        let urlCompareId = null;
+
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const gistId = urlParams.get('id');
+            baseGistId = gistId;
+            urlTab = urlParams.get('tab');
+            urlCompareId = urlParams.get('compare');
 
             if (gistId) {
                 statusText.innerText = `Accessing Cloud Archive (ID: ${gistId})...`;
@@ -730,6 +740,13 @@
                 } else {
                     statusText.innerText = `Awaiting Data Input... (No Local data.js Detected)`;
                 }
+            }
+            
+            // Process URL parameters after initial loading
+            if (urlCompareId) {
+                document.getElementById('compare-url').value = urlCompareId;
+                toggleCompareMode();
+                fetchCompareData();
             }
         }
 
@@ -1022,6 +1039,7 @@
                 } catch(e){}
             }
 
+            if (urlTab) firstActive = urlTab;
             if (firstActive) switchTab(firstActive);
         }
 
@@ -1030,6 +1048,30 @@
         let isCompareMode = false;
         let currentCompareFilter = 'all';
         let currentSearchTerm = '';
+        let currentCompareGistId = null;
+        let baseGistId = null;
+
+        function shareComparison() {
+            if (!baseGistId) {
+                alert("This is a local log. You must use 'Export - Online' from within RimWorld to create a shareable baseline before comparing.");
+                return;
+            }
+            if (!currentCompareGistId) {
+                alert("Please load a compared Mod List first.");
+                return;
+            }
+            const shareUrl = new URL(window.location.href.split('?')[0]);
+            shareUrl.searchParams.set('id', baseGistId);
+            shareUrl.searchParams.set('compare', currentCompareGistId);
+            shareUrl.searchParams.set('tab', 'mod-list');
+            
+            navigator.clipboard.writeText(shareUrl.toString()).then(() => {
+                const btn = document.getElementById('share-compare-btn');
+                const oldText = btn.innerHTML;
+                btn.innerText = "COPIED!";
+                setTimeout(() => btn.innerHTML = oldText, 2000);
+            });
+        }
 
         function onModSearch() {
             currentSearchTerm = document.getElementById('mod-search-input').value.toLowerCase();
@@ -1040,6 +1082,7 @@
             isCompareMode = true;
             document.getElementById('toggle-compare-btn').classList.add('hidden');
             document.getElementById('close-compare-btn').classList.remove('hidden');
+            document.getElementById('share-compare-btn').classList.remove('hidden');
             document.getElementById('compare-actions').classList.remove('hidden');
             document.getElementById('compare-filters').classList.remove('hidden');
             document.getElementById('right-mod-header').classList.remove('hidden');
@@ -1052,6 +1095,7 @@
             isCompareMode = false;
             document.getElementById('toggle-compare-btn').classList.remove('hidden');
             document.getElementById('close-compare-btn').classList.add('hidden');
+            document.getElementById('share-compare-btn').classList.add('hidden');
             document.getElementById('compare-actions').classList.add('hidden');
             document.getElementById('compare-filters').classList.add('hidden');
             document.getElementById('right-mod-header').classList.add('hidden');
@@ -1136,6 +1180,8 @@
                 errorDiv.classList.remove('hidden');
                 return;
             }
+            
+            currentCompareGistId = gistId;
             
             loadingDiv.classList.remove('hidden');
             compareTable.classList.add('hidden');
