@@ -691,7 +691,7 @@
                     blockColor = null; continue;
                 }
                 if (line.includes('--- STACK TRACE ---') || line.trim().startsWith('at ')) {
-                    result.push(`<span style="color:#888888;">${line}</span>`);
+                    result.push(`<span style="color:${blockColor || '#888888'};">${line}</span>`);
                     continue;
                 }
 
@@ -796,13 +796,13 @@
                         currentBlockColor = '#ff80cc';
                         lineHex = '#ff80cc';
                     } else if (line.includes('[!]') || line.includes('[+]') || line.includes('Suspect:')) {
-                        // Diagnostic markers: inherit parent block type, use bright green
-                        if (!currentType) currentType = 'meta';
-                        lineHex = '#44cc44';
+                        // Diagnostic markers: inherit parent block type color if it's an error/warning
+                        // otherwise use the bright green meta color
+                        const isPrimary = (currentBlockColor === '#ff0000' || currentBlockColor === '#ffff00' || currentBlockColor === '#ff4d4d');
+                        lineHex = isPrimary ? currentBlockColor : '#44cc44';
                     } else if (line.includes('--- STACK TRACE ---') || line.trim().startsWith('at ')) {
                         // Traces: inherit the current block's color so an error trace stays red,
-                        // a warning trace stays yellow, etc. Fall back to grey only if no block color is set.
-                        if (!currentType) currentType = 'meta';
+                        // a warning trace stays yellow, etc.
                         lineHex = currentBlockColor || '#888888';
                     }
                 }
@@ -840,10 +840,11 @@
             process(loadedData.session_log,   'btn-session',  'session-log',  true, true);
             process(loadedData.enhanced_log,  'btn-enhanced', 'enhanced-log', true, true);
 
-            // AI Master Data: compile all sections into one structured plain-text document.
-            // This makes it trivially copy-pastable into any LLM for instant troubleshooting.
+            // AI Master Data: compile ALL sections into one structured document.
+            // Strips all internal hex tags to prevent AI confusion.
             if (loadedData.ai_diagnostic) {
                 try {
+                    const cleanTags = (t) => t ? t.replace(/##CLR:[0-9A-Fa-f]{6}##/g, '') : '';
                     const parsedDiag = typeof loadedData.ai_diagnostic === 'string' ? JSON.parse(loadedData.ai_diagnostic) : loadedData.ai_diagnostic;
                     const parsedMods = loadedData.mod_list
                         ? (typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list)
@@ -857,18 +858,20 @@
                     masterText += (parsedMods ? JSON.stringify(parsedMods, null, 2) : 'No mod list data.') + '\n\n';
 
                     masterText += '=== 3. UNKNOWN TRACE REPORT ===\n';
-                    masterText += (loadedData.trace_report && loadedData.trace_report.trim().length > 0
-                        ? loadedData.trace_report
+                    masterText += (loadedData.trace_report && cleanTags(loadedData.trace_report).trim().length > 0
+                        ? cleanTags(loadedData.trace_report)
                         : 'No unknown traces detected.') + '\n\n';
 
                     masterText += '=== 4. ENHANCED GAME LOG ===\n';
-                    masterText += (loadedData.enhanced_log || 'No enhanced log data.') + '\n';
+                    masterText += (loadedData.enhanced_log ? cleanTags(loadedData.enhanced_log) : 'No enhanced log data.') + '\n\n';
+
+                    masterText += '=== 5. RAW GAME LOG ===\n';
+                    masterText += (loadedData.session_log ? cleanTags(loadedData.session_log) : 'No raw log data.') + '\n';
 
                     document.getElementById('ai-json').textContent = masterText;
                     document.getElementById('btn-ai').classList.remove('hidden');
                     if (!firstActive) firstActive = 'ai-json';
                 } catch(e) {
-                    // If JSON parsing hiccups, show raw dump instead of nothing
                     document.getElementById('ai-json').textContent = loadedData.ai_diagnostic || 'AI diagnostic data could not be parsed.';
                     document.getElementById('btn-ai').classList.remove('hidden');
                     if (!firstActive) firstActive = 'ai-json';
