@@ -127,8 +127,6 @@
         .mod-name-cell { font-weight: 600; font-size: 15px; }
         .meta-value { font-size: 11px; color: #6f7456; opacity: 0.8; }
         .version-tag { background: #5a5b49; color: #c7cb00; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 10px; margin-right: 4px; display: inline-block; }
-        .mod-preview { width: 72px; height: 40px; border-radius: 2px; object-fit: cover; border: 1px solid #333; background: #000; }
-        .no-preview { width: 72px; height: 40px; border-radius: 2px; background: #000; border: 1px dashed #5a5b49; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #444; }
 
         .description-container {
             display: flex;
@@ -230,13 +228,21 @@
         <div id="help-panel">
             <div class="help-header"><h3>Diagnostic Intelligence</h3><span class="close-help" onclick="toggleHelp(event)">&times;</span></div>
             <div class="help-section" id="dynamic-legend-container"><h4>Color Legend</h4></div>
+            <div class="help-section">
+                <h4>What to look for?</h4>
+                <p>Focus on Red and Deep Red entries in the Enhanced Log. These indicate where your game is actually failing to execute code. Check the 'Suspect' mod listed immediately above these errors.</p>
+            </div>
+            <div class="help-section">
+                <h4>Conflicting Mods</h4>
+                <p>Orange messages usually denote two or more mods fighting over the same function. Check if you have multiple mods that try to change the same game mechanic.</p>
+            </div>
         </div>
 
         <div id="enhanced-log" class="content-area hidden"></div>
         <div id="session-log" class="content-area hidden"></div>
         <div id="trace-report" class="content-area hidden"></div>
         <div id="mod-list" class="content-area hidden">
-            <table><thead><tr><th class="order">#</th><th>Image</th><th>Mod Name</th><th>Package ID</th><th>Author</th><th>Versions</th></tr></thead>
+            <table><thead><tr><th class="order">#</th><th>Mod Name</th><th>Package ID</th><th>Author</th><th>Versions</th></tr></thead>
             <tbody id="mod-table-body"></tbody></table>
         </div>
         <div id="ai-json" class="content-area hidden" style="color:#ffffff;"></div>
@@ -342,22 +348,38 @@
             return blocks.map(b => `<div class="log-block" data-logtype="${b.type}">${b.html}</div>`).join('');
         }
 
+        function renderModTable(mods) {
+            const tbody = document.getElementById('mod-table-body');
+            tbody.innerHTML = '';
+            mods.forEach((mod, index) => {
+                const tr = document.createElement('tr');
+                const nameHtml = (mod.steamId && mod.steamId !== "null") ? `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>` : mod.name;
+                const versionsHtml = mod.versions ? mod.versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('') : '';
+                tr.innerHTML = `<td class="order">${String(index).padStart(3, '0')}</td><td class="mod-name-cell">${nameHtml}</td><td class="meta-value">${mod.packageId}</td><td class="meta-value">${mod.authors || 'Unknown'}</td><td>${versionsHtml}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
         function renderData() {
             let firstActive = null;
-            function process(data, btnId, targetId, useBlocks = false) {
+            function process(data, btnId, targetId, colorize = true, useBlocks = false) {
                 if (!data) return;
                 document.getElementById(btnId).classList.remove('hidden');
-                document.getElementById(targetId).innerHTML = useBlocks ? applyColorsBlocked(data) : data;
+                const area = document.getElementById(targetId);
+                if (useBlocks) area.innerHTML = applyColorsBlocked(data);
+                else area.textContent = data;
                 if (!firstActive) firstActive = targetId;
             }
 
-            process(loadedData.session_log, 'btn-session', 'session-log', true);
-            process(loadedData.enhanced_log,'btn-enhanced','enhanced-log',true);
+            process(loadedData.session_log, 'btn-session', 'session-log', true, true);
+            process(loadedData.enhanced_log, 'btn-enhanced', 'enhanced-log', true, true);
+            process(loadedData.trace_report, 'btn-trace', 'trace-report', false, false);
             
             if (loadedData.ai_diagnostic) {
                 const clean = (t) => t.replace(/##CLR:[0-9A-Fa-f]{6}##/g, '').replace(/"previewImageBase64":\s*"[^"]*"(,\s*)?/g, '');
                 const parsedDiag = typeof loadedData.ai_diagnostic === 'string' ? JSON.parse(loadedData.ai_diagnostic) : loadedData.ai_diagnostic;
                 const parsedMods = loadedData.mod_list ? (typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list) : null;
+                
                 let masterText = 'ARCHOTECH AI MASTER DIAGNOSTIC\n===============================\n\n';
                 masterText += '=== 1. SYSTEM & AI DIAGNOSTICS ===\n' + JSON.stringify(parsedDiag, null, 2) + '\n\n';
                 masterText += '=== 2. ACTIVE MOD LIST ===\n';
@@ -379,29 +401,46 @@
             }
             if (loadedData.mod_list) {
                 try {
-                const m = JSON.parse(loadedData.mod_list);
-                if (m.activeMods) {
-                    const tbody = document.getElementById('mod-table-body');
-                    m.activeMods.forEach((mod, idx) => {
-                        const tr = document.createElement('tr');
-                        const img = mod.steamId && mod.steamId !== "null" ? `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" />` : '<div class="no-preview">N/A</div>';
-                        const name = mod.steamId && mod.steamId !== "null" ? `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>` : mod.name;
-                        tr.innerHTML = `<td class="order">${idx}</td><td>${img}</td><td class="mod-name-cell">${name}</td><td>${mod.packageId}</td><td>${mod.authors}</td><td>${mod.versions}</td>`;
-                        tbody.appendChild(tr);
-                    });
-                    document.getElementById('btn-mods').classList.remove('hidden');
-                }
+                    const m = JSON.parse(loadedData.mod_list);
+                    if (m.activeMods) {
+                        renderModTable(m.activeMods);
+                        document.getElementById('btn-mods').classList.remove('hidden');
+                        if (!firstActive) firstActive = 'mod-list';
+                    }
                 } catch(e){}
+            }
+            if (loadedData.color_legend) {
+                document.getElementById('dynamic-legend-container').innerHTML = '<h4>Color Legend</h4>' + loadedData.color_legend;
             }
             if (firstActive) switchTab(firstActive);
         }
 
         function switchTab(id) {
+            const descs = {
+                'session-log': `<b>Raw Game Log:</b> This is a complete, sequentially accurate dump of every message sent to the game console during your current play session. <br/><b>Use Case:</b> Perfect for seeing exactly when an error occurred in relation to other events.`,
+                'enhanced-log': `<b>Enhanced Game Log:</b> A high-intelligence reconstruction of the raw log. It deduplicates repeated spam, tracks Harmony patches, and attempts to attribute every error to a specific mod. <br/><b>Use Case:</b> This is the primary tool for players. It translates cryptic code errors into human-readable suspects.`,
+                'ai-json': `<b>AI Diagnostics:</b> A compiled diagnostic package containing system specs, mod list, and all error logs. <br/><b>Use Case:</b> Contains pure structured data. Click 'SAVE TO FILE' to download the package as a .txt document, then upload that file to AI for troubleshooting.`,
+                'trace-report': `<b>DS Trace Report:</b> A collection of logs that the Archotech engine detected but could not confidently attribute to a specific mod. <br/><b>Use Case:</b> Primarily used by the Archotech development team or advanced modders to improve the scanner.`,
+                'player-log': `<b>Unity Engine Log:</b> The raw 'Player.log' generated by the Unity engine. <br/><b>Use Case:</b> This file contains hardware-level errors, driver crashes, and initialization failures that occur before RimWorld starts.`,
+                'mod-list': `<b>Archotech Mod List:</b> A full manifest of every active mod in your current load order, including specific versions and package IDs. <br/><b>Use Case:</b> Essential for checking version compatibility and ensuring you have all required dependencies.`
+            };
+            
+            const descEl = document.getElementById('tab-description');
+            const defaultDesc = document.getElementById('default-desc');
+            if (descs[id]) {
+                descEl.innerHTML = `<div>${descs[id]}</div>`;
+                descEl.classList.remove('hidden');
+                defaultDesc.classList.add('hidden');
+            } else {
+                descEl.classList.add('hidden');
+                defaultDesc.classList.remove('hidden');
+            }
+
             document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.target === id));
             document.querySelectorAll('.content-area').forEach(c => c.classList.toggle('hidden', c.id !== id));
             document.getElementById('filter-bar').classList.toggle('hidden', id !== 'session-log' && id !== 'enhanced-log');
             currentActiveTarget = id;
-            setFilter('all'); // Ensure filters are reset upon entering a new log view
+            setFilter('all'); 
             window.scrollTo(0,0);
         }
 
@@ -418,14 +457,12 @@
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const gistId = urlParams.get('id');
-
             if (gistId) {
                 document.getElementById('status-text').innerText = `Linking to Cloud Diagnostic Archive [ID: ${gistId}]...`;
                 try {
                     const response = await fetch(`https://api.github.com/gists/${gistId}`);
                     if (!response.ok) throw new Error('Neural archive connection failed');
                     const data = await response.json();
-                    
                     if (data.files) {
                         loadedData.ai_diagnostic = data.files["AI_DIAGNOSTICS.json"]?.content || null;
                         loadedData.enhanced_log = data.files["ENHANCED_RAW_LOG.txt"]?.content || null;
@@ -437,9 +474,7 @@
                     renderData();
                     document.getElementById('status-text').innerText = `Online Diagnostic Handshake Ready [${gistId}]`;
                     document.getElementById('online-notice').classList.remove('hidden');
-                } catch (err) {
-                    document.getElementById('status-text').innerHTML = `<span style="color:red">Archotech Linkage Failure: ${err.message}</span>`;
-                }
+                } catch (err) { document.getElementById('status-text').innerHTML = `<span style="color:red">Archotech Linkage Failure: ${err.message}</span>`; }
             } else if (window.archotechLocalData) {
                 loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"];
                 loadedData.enhanced_log = window.archotechLocalData["ENHANCED_RAW_LOG.txt"];
@@ -450,9 +485,7 @@
                 loadedData.color_legend = window.archotechLocalData["COLOR_LEGEND_HTML.txt"];
                 renderData();
                 document.getElementById('status-text').innerText = "Local Neural Link Established.";
-            } else {
-                document.getElementById('status-text').innerText = "Awaiting Handshake Signals...";
-            }
+            } else { document.getElementById('status-text').innerText = "Awaiting Handshake Signals..."; }
         }
         function toggleHelp(e) { if(e) e.stopPropagation(); document.getElementById('help-panel').classList.toggle('open'); }
         function copyActiveContent() { navigator.clipboard.writeText(document.getElementById(currentActiveTarget).innerText); }
