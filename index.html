@@ -355,6 +355,7 @@
             <!-- Buttons will be shown dynamically -->
             <button class="tab hidden" data-target="session-log" id="btn-session">Raw Game Log</button>
             <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced">Enhanced Game Log</button>
+            <button class="tab hidden" data-target="ai-json" id="btn-ai">AI Master Data</button>
             <button class="tab hidden" data-target="trace-report" id="btn-trace">DS Trace Report</button>
             <button class="tab hidden" data-target="player-log" id="btn-player">Unity Engine Log</button>
             <button class="tab hidden" data-target="mod-list" id="btn-mods">Archotech Mod List</button>
@@ -377,10 +378,6 @@
                 <button id="global-copy-btn" class="side-btn" onclick="copyActiveContent()">
                     <div>COPY TO</div>
                     <div>CLIPBOARD</div>
-                </button>
-                <button id="ai-link-btn" class="side-btn hidden" onclick="copyAILink()" title="Copies a machine-readable data link. Paste this into ChatGPT, Claude, or Gemini for instant log analysis.">
-                    <div>COPY AI</div>
-                    <div>LINK</div>
                 </button>
             </div>
         </div>
@@ -445,7 +442,7 @@
                 <tbody id="mod-table-body"></tbody>
             </table>
         </div>
-        <!-- ai-json div retained so data is downloaded in init() but tab is removed per AI Link update -->
+        <div id="ai-json" class="content-area hidden" style="color:#ffffff;"></div>
         <!-- Player.log: always white plaintext, note at top added by JS when loaded -->
         <div id="player-log" class="content-area hidden" style="color:#ffffff;"></div>
     </div>
@@ -498,6 +495,8 @@
                 'session-log': `<b>Raw Game Log:</b> This is a complete, sequentially accurate dump of every message sent to the game console during your current play session. <br/><b>Use Case:</b> Perfect for seeing exactly when an error occurred in relation to other events. It contains the raw stack traces used by developers to pinpoint failing lines of code. It captures everything from startup to the moment of export.`,
                 
                 'enhanced-log': `<b>Enhanced Game Log:</b> A high-intelligence reconstruction of the raw log. It deduplicates repeated spam, tracks Harmony patches, and attempts to attribute every error to a specific mod using the Deep Scan engine. <br/><b>Use Case:</b> This is the primary tool for players. It translates cryptic code errors into human-readable suspects. If you see [!] symbols, pay close attention to the Mod Suspect listed below them.`,
+                
+                'ai-json': `<b>AI Master Data:</b> A compiled diagnostic package containing system specs, mod list, and all error logs. <br/><b>Use Case:</b> Contains pure structured data. Click 'SAVE TO FILE' to download the complete package as a .txt document, then upload that file directly to ChatGPT, Claude, or Gemini for instant troubleshooting.`,
                 
                 'trace-report': `<b>DS Trace Report:</b> A collection of logs that the Archotech engine detected but could not confidently attribute to a specific mod. <br/><b>Use Case:</b> Primarily used by the Archotech development team or advanced modders to improve the scanner. If you have a persistent bug that Archotech says is 'Unknown', providing this report helps us create a new 'fingerprint' to identify that mod in the future.`,
                 
@@ -608,18 +607,11 @@
             URL.revokeObjectURL(url);
         }
 
-        // Stores the active gist ID so copyAILink() can use it without re-parsing the URL.
-        let activeGistId = null;
-
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const gistId = urlParams.get('id');
 
             if (gistId) {
-                activeGistId = gistId;
-                // AI Link button is only meaningful for online cloud exports
-                document.getElementById('ai-link-btn').classList.remove('hidden');
-
                 statusText.innerText = `Accessing Cloud Archive (ID: ${gistId})...`;
                 try {
                     const response = await fetch(`https://api.github.com/gists/${gistId}`);
@@ -641,7 +633,6 @@
                     statusText.innerHTML = `<span style="color:red">Linkage Error: ${err.message}</span>`;
                 }
             } else {
-                // Local / offline mode — AI Link button stays hidden
                 if (window.archotechLocalData) {
                     statusText.innerText = `Local Diagnostic Record (Secure Handshake Success)`;
                     loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"] || null;
@@ -656,27 +647,6 @@
                     statusText.innerText = `Awaiting Data Input... (No Local data.js Detected)`;
                 }
             }
-        }
-
-        // Constructs a smart AI prompt containing the GitHub Gist API URL and copies it
-        // to the clipboard. The AI (Claude, Gemini, ChatGPT etc.) can natively fetch the
-        // endpoint and read all exported log files without the user having to copy raw text.
-        function copyAILink() {
-            if (!activeGistId) return; // Should never reach here (button is hidden offline)
-            const apiUrl = `https://api.github.com/gists/${activeGistId}`;
-            const prompt =
-                `I need help troubleshooting my RimWorld mod list. Please fetch the diagnostic data from this API endpoint: ${apiUrl}.\n\n` +
-                `Please read the complete exported package including \`AI_DIAGNOSTICS.json\`, \`ENHANCED_RAW_LOG.txt\`, ` +
-                `\`SESSION_LOG_DUMP.txt\`, \`MOD_LIST.json\`, and the \`UNKNOWN_TRACE_REPORT.txt\` (DS Trace Report). ` +
-                `Use all of these files together to find the primary crashing errors, analyze any low-confidence traces, ` +
-                `and tell me exactly which mods are causing the errors and how to fix them.`;
-
-            navigator.clipboard.writeText(prompt).then(() => {
-                const btn = document.getElementById('ai-link-btn');
-                const origHTML = btn.innerHTML;
-                btn.innerHTML = '<div>LINK</div><div>COPIED!</div>';
-                setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
-            });
         }
 
         // applyColors: parses ##CLR:rrggbb## tags embedded by ExportManager.cs
@@ -829,11 +799,11 @@
                         // Diagnostic markers: inherit parent block type, use bright green
                         if (!currentType) currentType = 'meta';
                         lineHex = '#44cc44';
-                    } else if (line.includes('--- STACK TRACE ---') || /^\s+at [A-Za-z_][A-Za-z0-9_.]+[.(]/.test(line)) {
-                        // Traces: real C# stack frames only ("  at Namespace.Class.Method(").
-                        // Plain enhanced-log annotation lines that happen to start with 'at ' won't match.
+                    } else if (line.includes('--- STACK TRACE ---') || line.trim().startsWith('at ')) {
+                        // Traces: inherit the current block's color so an error trace stays red,
+                        // a warning trace stays yellow, etc. Fall back to grey only if no block color is set.
                         if (!currentType) currentType = 'meta';
-                        lineHex = '#888888';
+                        lineHex = currentBlockColor || '#888888';
                     }
                 }
 
@@ -870,8 +840,40 @@
             process(loadedData.session_log,   'btn-session',  'session-log',  true, true);
             process(loadedData.enhanced_log,  'btn-enhanced', 'enhanced-log', true, true);
 
-            // AI Diagnostics data is still downloaded for the AI Link feature,
-            // but no longer rendered as a visible tab — users copy the API link instead.
+            // AI Master Data: compile all sections into one structured plain-text document.
+            // This makes it trivially copy-pastable into any LLM for instant troubleshooting.
+            if (loadedData.ai_diagnostic) {
+                try {
+                    const parsedDiag = typeof loadedData.ai_diagnostic === 'string' ? JSON.parse(loadedData.ai_diagnostic) : loadedData.ai_diagnostic;
+                    const parsedMods = loadedData.mod_list
+                        ? (typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list)
+                        : null;
+
+                    let masterText = '';
+                    masterText += '=== 1. SYSTEM & AI DIAGNOSTICS ===\n';
+                    masterText += JSON.stringify(parsedDiag, null, 2) + '\n\n';
+
+                    masterText += '=== 2. ACTIVE MOD LIST ===\n';
+                    masterText += (parsedMods ? JSON.stringify(parsedMods, null, 2) : 'No mod list data.') + '\n\n';
+
+                    masterText += '=== 3. UNKNOWN TRACE REPORT ===\n';
+                    masterText += (loadedData.trace_report && loadedData.trace_report.trim().length > 0
+                        ? loadedData.trace_report
+                        : 'No unknown traces detected.') + '\n\n';
+
+                    masterText += '=== 4. ENHANCED GAME LOG ===\n';
+                    masterText += (loadedData.enhanced_log || 'No enhanced log data.') + '\n';
+
+                    document.getElementById('ai-json').textContent = masterText;
+                    document.getElementById('btn-ai').classList.remove('hidden');
+                    if (!firstActive) firstActive = 'ai-json';
+                } catch(e) {
+                    // If JSON parsing hiccups, show raw dump instead of nothing
+                    document.getElementById('ai-json').textContent = loadedData.ai_diagnostic || 'AI diagnostic data could not be parsed.';
+                    document.getElementById('btn-ai').classList.remove('hidden');
+                    if (!firstActive) firstActive = 'ai-json';
+                }
+            }
 
             process(loadedData.trace_report, 'btn-trace', 'trace-report');
 
