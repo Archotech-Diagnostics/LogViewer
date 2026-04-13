@@ -409,7 +409,7 @@
                 <div style="display: flex; gap: 5px;">
                     <button id="toggle-compare-btn" class="side-btn" onclick="toggleCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px;">COMPARE MODE</button>
                     <button id="close-compare-btn" class="side-btn hidden" onclick="closeCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #6f7456; color: #c7cb00;">CLOSE COMPARE</button>
-                    <button id="share-compare-btn" class="side-btn hidden" onclick="shareComparison()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #1a1a1a; color: #66e5ff;">SHARE COMPARISON</button>
+                    <button id="share-compare-btn" class="side-btn hidden" onclick="shareComparison()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #1a1a1a; color: #c7cb00;">SHARE COMPARISON</button>
                 </div>
                 
                 <div id="compare-actions" class="hidden" style="display: flex; gap: 8px; align-items: center;">
@@ -744,6 +744,11 @@
             
             // Process URL parameters after initial loading
             if (urlCompareId) {
+                // Isolation mode: Hide other tabs to focus on comparison
+                document.querySelectorAll('.tab').forEach(t => {
+                    if (t.id !== 'btn-mods') t.classList.add('hidden');
+                });
+
                 document.getElementById('compare-url').value = urlCompareId;
                 toggleCompareMode();
                 fetchCompareData();
