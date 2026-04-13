@@ -428,19 +428,83 @@
         <div id="session-log" class="content-area hidden"></div>
         <div id="trace-report" class="content-area hidden"></div>
         <div id="mod-list" class="content-area hidden">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="order">#</th>
-                        <th>Image</th>
-                        <th>Mod Name</th>
-                        <th>Package ID</th>
-                        <th>Author</th>
-                        <th>Versions</th>
-                    </tr>
-                </thead>
-                <tbody id="mod-table-body"></tbody>
-            </table>
+            <!-- Mod List Controls -->
+            <div id="mod-list-controls" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <button id="toggle-compare-btn" class="side-btn" onclick="toggleCompareMode()" style="flex-direction: row; min-width: auto; padding: 8px 15px;">COMPARE MODE</button>
+                    <button id="close-compare-btn" class="side-btn hidden" onclick="closeCompareMode()" style="flex-direction: row; min-width: auto; padding: 8px 15px; background-color: #6f7456; color: #c7cb00;">CLOSE COMPARE</button>
+                </div>
+                
+                <div id="compare-actions" class="hidden" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="compare-url" placeholder="Paste another LogViewer link here..." style="background: #111; color: #fff; border: 1px solid #5a5b49; padding: 7px; width: 350px; font-family: monospace; font-size: 12px;">
+                    <button class="side-btn" onclick="fetchCompareData()" style="flex-direction: row; min-width: auto; padding: 8px 15px;">LOAD</button>
+                </div>
+                
+                <div id="compare-filters" class="hidden" style="display: flex; gap: 5px; border-left: 1px solid #2e2e26; padding-left: 10px;">
+                    <span class="filter-label" style="align-self: center; margin-right: 5px;">Show:</span>
+                    <button id="filter-all-mods" class="filter-btn active" onclick="setCompareFilter('all')">ALL</button>
+                    <button id="filter-shared-mods" class="filter-btn" onclick="setCompareFilter('shared')">SHARED</button>
+                    <button id="filter-unique-left" class="filter-btn" onclick="setCompareFilter('left')">UNIQUE to You</button>
+                    <button id="filter-unique-right" class="filter-btn" onclick="setCompareFilter('right')">UNIQUE to Them</button>
+                </div>
+            </div>
+
+            <!-- Mod List Split Container -->
+            <div id="mod-list-split-container" style="display: flex; gap: 20px; align-items: flex-start;">
+                <!-- Left side: Your Mods -->
+                <div id="mod-list-left" style="flex: 1; overflow-x: auto; width: 100%;">
+                    <h3 id="left-mod-header" class="hidden" style="margin-top: 0; font-size: 14px;">Your Mod List</h3>
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: 40px;">
+                            <col style="width: 80px;">
+                            <col style="width: 25%;">
+                            <col style="width: 25%;">
+                            <col style="width: 20%;">
+                            <col style="width: 15%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="order">#</th>
+                                <th>Image</th>
+                                <th>Mod Name</th>
+                                <th>Package ID</th>
+                                <th>Author</th>
+                                <th>Versions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mod-table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Right side: Their Mods -->
+                <div id="mod-list-right" class="hidden" style="flex: 1; overflow-x: auto; width: 100%;">
+                    <h3 style="margin-top: 0; font-size: 14px;">Compared Mod List</h3>
+                    <div id="compare-loading" class="hidden" style="color: #c7cb00; padding: 10px;">Fetching mod list data...</div>
+                    <div id="compare-error" class="hidden" style="color: #ff4d4d; padding: 10px; background: #2a1111; border: 1px solid #cc3333;"></div>
+                    <table id="mod-table-compare-wrapper" class="hidden" style="table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: 40px;">
+                            <col style="width: 80px;">
+                            <col style="width: 25%;">
+                            <col style="width: 25%;">
+                            <col style="width: 20%;">
+                            <col style="width: 15%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="order">#</th>
+                                <th>Image</th>
+                                <th>Mod Name</th>
+                                <th>Package ID</th>
+                                <th>Author</th>
+                                <th>Versions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mod-table-body-compare"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
         <div id="ai-json" class="content-area hidden" style="color:#ffffff;"></div>
         <!-- Player.log: always white plaintext, note at top added by JS when loaded -->
@@ -494,9 +558,9 @@
             const descs = {
                 'session-log': `<b>Raw Game Log:</b> This is a complete, sequentially accurate dump of every message sent to the game console during your current play session. <br/><b>Use Case:</b> Perfect for seeing exactly when an error occurred in relation to other events. It contains the raw stack traces used by developers to pinpoint failing lines of code. It captures everything from startup to the moment of export.`,
                 
-                'enhanced-log': `<b>Enhanced Game Log:</b> A high-intelligence reconstruction of the raw log. It deduplicates repeated spam, tracks Harmony patches, and attempts to attribute every error to a specific mod using the Deep Scan engine. <br/><b>Use Case:</b> This is the primary tool for players. It translates cryptic code errors into human-readable suspects. If you see [!] symbols, pay close attention to the Mod Suspect listed below them.`,
+                'enhanced-log': `<b>Enhanced Game Log:</b> A user-friendly version of the game log designed for non-modders. It includes helpful notes and comments that explain exactly what each error means and which mod might be causing it, turning confusing code into plain English. <br/><b>Use Case:</b> This is your primary troubleshooting tool. Instead of reading technical jargon, look for the 'What happened' and 'Suspect' sections to find quick solutions to your game problems.`,
                 
-                'ai-json': `<b>AI Master Data:</b> A compiled diagnostic package containing system specs, mod list, and all error logs. <br/><b>Use Case:</b> Contains pure structured data. Click 'SAVE TO FILE' to download the complete package as a .txt document, then upload that file directly to ChatGPT, Claude, or Gemini for instant troubleshooting.`,
+                'ai-json': `<b>AI Diagnostics:</b> A specialized, highly structured diagnostic package containing your system specs, full mod list, and all error logs formatted specifically for machine intelligence. <br/><b>Use Case:</b> Perfect for solving complex in-game problems using Artificial Intelligence. Click 'SAVE TO FILE' to download this complete package, then upload it to Gemini, ChatGPT, or Claude for an instant, detailed analysis of your mod list and errors.`,
                 
                 'trace-report': `<b>DS Trace Report:</b> A collection of logs that the Archotech engine detected but could not confidently attribute to a specific mod. <br/><b>Use Case:</b> Primarily used by the Archotech development team or advanced modders to improve the scanner. If you have a persistent bug that Archotech says is 'Unknown', providing this report helps us create a new 'fingerprint' to identify that mod in the future.`,
                 
@@ -926,7 +990,12 @@
                 try {
                     const modsObj = typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list;
                     if (modsObj.activeMods) {
-                        renderModTable(modsObj.activeMods);
+                        myModsCache = modsObj.activeMods;
+                        renderModTableBody(myModsCache, 'mod-table-body');
+                        
+                        // Default setup
+                        if (isCompareMode) setCompareFilter(currentCompareFilter);
+                        
                         document.getElementById('btn-mods').classList.remove('hidden');
                         if (!firstActive) firstActive = 'mod-list';
                     }
@@ -936,8 +1005,147 @@
             if (firstActive) switchTab(firstActive);
         }
 
-        function renderModTable(mods) {
-            const tbody = document.getElementById('mod-table-body');
+        let myModsCache = [];
+        let theirModsCache = [];
+        let isCompareMode = false;
+        let currentCompareFilter = 'all';
+
+        function toggleCompareMode() {
+            isCompareMode = true;
+            document.getElementById('toggle-compare-btn').classList.add('hidden');
+            document.getElementById('close-compare-btn').classList.remove('hidden');
+            document.getElementById('compare-actions').classList.remove('hidden');
+            document.getElementById('compare-filters').classList.remove('hidden');
+            
+            document.getElementById('left-mod-header').classList.remove('hidden');
+            document.getElementById('mod-list-right').classList.remove('hidden');
+            
+            setCompareFilter(currentCompareFilter);
+        }
+
+        function closeCompareMode() {
+            isCompareMode = false;
+            document.getElementById('toggle-compare-btn').classList.remove('hidden');
+            document.getElementById('close-compare-btn').classList.add('hidden');
+            document.getElementById('compare-actions').classList.add('hidden');
+            document.getElementById('compare-filters').classList.add('hidden');
+            
+            document.getElementById('left-mod-header').classList.add('hidden');
+            document.getElementById('mod-list-right').classList.add('hidden');
+            
+            // Full reset to left side single view
+            renderModTableBody(myModsCache, 'mod-table-body');
+        }
+
+        function setCompareFilter(filterParam) {
+            currentCompareFilter = filterParam;
+            
+            ['all', 'shared', 'left', 'right'].forEach(f => {
+                const btn = document.getElementById(f === 'all' ? 'filter-all-mods' : 
+                                                  f === 'shared' ? 'filter-shared-mods' : 
+                                                  f === 'left' ? 'filter-unique-left' : 'filter-unique-right');
+                if(btn) btn.classList.toggle('active', f === filterParam);
+            });
+            
+            if (!isCompareMode) {
+                renderModTableBody(myModsCache, 'mod-table-body');
+                return;
+            }
+            
+            let filteredMine = myModsCache;
+            let filteredTheirs = theirModsCache;
+            
+            if (theirModsCache.length > 0) {
+                const myIds = new Set(myModsCache.map(m => m.packageId.toLowerCase()));
+                const theirIds = new Set(theirModsCache.map(m => m.packageId.toLowerCase()));
+                
+                if (filterParam === 'shared') {
+                    filteredMine = myModsCache.filter(m => theirIds.has(m.packageId.toLowerCase()));
+                    filteredTheirs = theirModsCache.filter(m => myIds.has(m.packageId.toLowerCase()));
+                } else if (filterParam === 'left') {
+                    filteredMine = myModsCache.filter(m => !theirIds.has(m.packageId.toLowerCase()));
+                    filteredTheirs = [];
+                } else if (filterParam === 'right') {
+                    filteredMine = [];
+                    filteredTheirs = theirModsCache.filter(m => !myIds.has(m.packageId.toLowerCase()));
+                }
+            }
+            
+            renderModTableBody(filteredMine, 'mod-table-body');
+            renderModTableBody(filteredTheirs, 'mod-table-body-compare');
+        }
+
+        async function fetchCompareData() {
+            const urlInput = document.getElementById('compare-url').value.trim();
+            const errorDiv = document.getElementById('compare-error');
+            const loadingDiv = document.getElementById('compare-loading');
+            const compareTable = document.getElementById('mod-table-compare-wrapper');
+            
+            errorDiv.classList.add('hidden');
+            errorDiv.innerText = '';
+            
+            if (!urlInput) {
+                errorDiv.innerText = "Please paste a valid URL.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            let gistId = null;
+            try {
+                const parsedUrl = new URL(urlInput);
+                gistId = parsedUrl.searchParams.get('id');
+            } catch(e) {
+                if (urlInput.match(/^[a-zA-Z0-9]+$/)) {
+                    gistId = urlInput;
+                } else {
+                    errorDiv.innerText = "Invalid URL format.";
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+            }
+            
+            if (!gistId) {
+                errorDiv.innerText = "Could not parse an 'id' from the URL.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            loadingDiv.classList.remove('hidden');
+            compareTable.classList.add('hidden');
+            theirModsCache = [];
+            renderModTableBody([], 'mod-table-body-compare');
+            
+            try {
+                const response = await fetch(`https://api.github.com/gists/${gistId}`);
+                if (!response.ok) throw new Error('Log record inaccessible or not found.');
+                
+                const data = await response.json();
+                if (data.files && data.files["MOD_LIST.json"]) {
+                    const modsContent = data.files["MOD_LIST.json"].content;
+                    const modsObj = typeof modsContent === 'string' ? JSON.parse(modsContent) : modsContent;
+                    if (modsObj && modsObj.activeMods) {
+                        theirModsCache = modsObj.activeMods;
+                    }
+                }
+                
+                if (theirModsCache.length === 0) {
+                    throw new Error("No mods found in the provided archive.");
+                }
+                
+                loadingDiv.classList.add('hidden');
+                compareTable.classList.remove('hidden');
+                setCompareFilter(currentCompareFilter);
+                
+            } catch (err) {
+                loadingDiv.classList.add('hidden');
+                errorDiv.innerText = `Error: ${err.message}`;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        function renderModTableBody(mods, tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
             tbody.innerHTML = '';
             
             mods.forEach((mod, index) => {
@@ -964,7 +1172,7 @@
                     <td class="order">${String(index).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
-                    <td class="meta-value">${mod.packageId}</td>
+                    <td class="meta-value" style="word-break: break-word;">${mod.packageId}</td>
                     <td class="meta-value">${mod.authors || 'Unknown'}</td>
                     <td>${versionsHtml}</td>
                 `;
