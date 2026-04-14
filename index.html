@@ -1148,30 +1148,23 @@
                     }
                     statusText.innerText = `Online Diagnostic Record [${gistId}]`;
                     document.getElementById('online-notice').classList.remove('hidden');
+                    await renderData();
                 } catch (err) {
                     statusText.innerHTML = `<span style="color:red">Linkage Error: ${err.message}</span>`;
-                } finally {
-                    await renderData();
                 }
             } else {
                 if (window.archotechLocalData) {
-                    try {
-                        statusText.innerText = `Local Diagnostic Record (Secure Handshake Success)`;
-                        loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"] || null;
-                        loadedData.enhanced_log = window.archotechLocalData["ENHANCED_RAW_LOG.txt"] || null;
-                        loadedData.session_log = window.archotechLocalData["SESSION_LOG_DUMP.txt"] || null;
-                        loadedData.trace_report = window.archotechLocalData["UNKNOWN_TRACE_REPORT.txt"] || null;
-                        loadedData.mod_list = window.archotechLocalData["MOD_LIST.json"] || null;
-                        loadedData.player_log = window.archotechLocalData["Player.log"] || null;
-                        loadedData.color_legend = window.archotechLocalData["COLOR_LEGEND_HTML.txt"] || null;
-                    } finally {
-                        await renderData();
-                    }
+                    statusText.innerText = `Local Diagnostic Record (Secure Handshake Success)`;
+                    loadedData.ai_diagnostic = window.archotechLocalData["AI_DIAGNOSTICS.json"] || null;
+                    loadedData.enhanced_log = window.archotechLocalData["ENHANCED_RAW_LOG.txt"] || null;
+                    loadedData.session_log = window.archotechLocalData["SESSION_LOG_DUMP.txt"] || null;
+                    loadedData.trace_report = window.archotechLocalData["UNKNOWN_TRACE_REPORT.txt"] || null;
+                    loadedData.mod_list = window.archotechLocalData["MOD_LIST.json"] || null;
+                    loadedData.player_log = window.archotechLocalData["Player.log"] || null;
+                    loadedData.color_legend = window.archotechLocalData["COLOR_LEGEND_HTML.txt"] || null;
+                    await renderData();
                 } else {
                     statusText.innerText = `Awaiting Data Input... (No Local data.js Detected)`;
-                    // Even if no data, remove splash to show the message
-                    const splash = document.getElementById('loading-splash');
-                    if (splash) splash.remove();
                 }
             }
             
@@ -1254,12 +1247,7 @@
                     const modsObj = typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list;
                     if (modsObj.activeMods) {
                         myModsCache = modsObj.activeMods;
-                        // Non-blocking update check
-                        fetchSteamUpdates(myModsCache).then(() => {
-                            if (currentActiveTarget === 'mod-list') {
-                                renderModTableBody(myModsCache, 'mod-table-body');
-                            }
-                        });
+                        await fetchSteamUpdates(myModsCache);
                     }
                 } catch(e) {}
             }
@@ -1551,15 +1539,10 @@
                 const tr = document.createElement('tr');
                 
                 let previewHtml = `<div class="no-preview">N/A</div>`;
-                const steamId = mod.steamId || '';
-                const modName = mod.name || 'Unknown Mod';
-
-                if (mod.localImagePath) {
-                    previewHtml = `<img src="${mod.localImagePath}" alt="${modName}" class="mod-preview" onerror="this.onerror=null; if('${steamId}' && '${steamId}' !== 'null') { this.src='https://community.cloudflare.steamstatic.com/public/images/apps/294100/${steamId}.jpg'; } else { this.style.display='none'; }" />`;
-                } else if (steamId && steamId !== "null") {
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${steamId}.jpg" alt="${modName}" class="mod-preview" onerror="this.style.display='none'" />`;
-                } else if (mod.previewImageBase64) {
+                if (mod.previewImageBase64) {
                     previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
+                } else if (mod.steamId && mod.steamId !== "null") {
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.style.display='none'" />`;
                 }
 
                 let statusClass = 'status-unknown';
@@ -1568,9 +1551,9 @@
                 
                 const statusHtml = `<div style="display:flex; align-items:center; justify-content:center;"><span class="status-dot ${statusClass}" style="margin:0" title="${mod.updateStatus}"></span></div>`;
 
-                let nameHtml = modName;
-                if (steamId && steamId !== "null") {
-                    nameHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${steamId}" target="_blank">${modName}</a>`;
+                let nameHtml = mod.name;
+                if (mod.steamId && mod.steamId !== "null") {
+                    nameHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>`;
                 }
 
                 let versionsHtml = '';
