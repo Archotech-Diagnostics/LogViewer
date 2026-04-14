@@ -1539,10 +1539,12 @@
                 const tr = document.createElement('tr');
                 
                 let previewHtml = `<div class="no-preview">N/A</div>`;
-                if (mod.previewImageBase64) {
-                    previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
+                if (mod.localImagePath) {
+                    // Chain: Local Path -> Steam CDN -> N/A Box
+                    previewHtml = `<img src="${mod.localImagePath}" class="mod-preview" onerror="this.onerror=null; if('${mod.steamId}' && '${mod.steamId}' !== 'null') { this.src='https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg'; this.onerror=function(){this.outerHTML='<div class=\\'no-preview\\'>N/A</div>'}; } else { this.outerHTML='<div class=\\'no-preview\\'>N/A</div>'; }" />`;
                 } else if (mod.steamId && mod.steamId !== "null") {
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.style.display='none'" />`;
+                    // Fallback for online-only records or missing local copies
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.onerror=null; this.outerHTML='<div class=\\'no-preview\\'>N/A</div>';" />`;
                 }
 
                 let statusClass = 'status-unknown';
