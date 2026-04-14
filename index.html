@@ -1224,12 +1224,18 @@
                     }
                 });
                 
-                // If any preview URLs were found, refresh them in the UI instantly
-                document.querySelectorAll('.mod-preview[data-steam-id]').forEach(img => {
-                    const id = img.getAttribute('data-steam-id');
+                // Refresh images in the UI instantly with new proxy data
+                document.querySelectorAll('.preview-container').forEach(container => {
+                    const id = container.getAttribute('data-steam-id') || container.querySelector('img')?.getAttribute('data-steam-id');
                     const mod = activeMods.find(m => String(m.steamId) === id);
-                    if (mod && mod.previewUrl && img.src.includes('Previews/')) {
-                         img.src = mod.previewUrl;
+                    if (mod && mod.previewUrl) {
+                        const img = container.querySelector('img');
+                        if (img) {
+                             img.src = mod.previewUrl;
+                        } else {
+                             // If it was already replaced by a label, restore it
+                             container.innerHTML = `<img src="${mod.previewUrl}" class="mod-preview" />`;
+                        }
                     }
                 });
 
@@ -1554,29 +1560,37 @@
             const steamId = img.getAttribute('data-steam-id');
             const cachedUrl = img.getAttribute('data-preview-url');
 
-            // 1. Try our known high-speed cached URL first
+            // 1. Try known proxy URL first
             if (cachedUrl && cachedUrl !== "" && !img.dataset.triedCache) {
                 img.dataset.triedCache = 'true';
                 img.src = cachedUrl;
                 return;
             }
 
+            // 2. If it's a workshop mod, DON'T switch to label immediately.
+            // Wait for fetchSteamUpdates to populate the proxyUrl.
+            // Only switch to label if we've already tried the proxy or it's not a workshop mod.
             if (steamId && steamId !== 'null' && !img.dataset.triedProxy) {
-                img.dataset.triedProxy = 'true';
-                try {
-                    // 2. Try the scrape fallback as a last resort
-                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`;
-                    const response = await fetch(proxyUrl);
-                    const html = await response.text();
-                    
-                    const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
-                    if (match && match[1]) {
-                        img.src = match[1];
-                        return;
-                    }
-                } catch (e) { }
+                // If we are online (no local Previews folder reachable), 
+                // we try to scrape as a fallback but usually we just wait for the proxy data in data-preview-url.
+                if (!window.archotechLocalData) {
+                    img.dataset.triedProxy = 'true';
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`;
+                        const response = await fetch(proxyUrl);
+                        const html = await response.text();
+                        const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
+                        if (match && match[1]) {
+                            img.src = match[1];
+                            return;
+                        }
+                    } catch (e) { }
+                }
             }
-            img.parentElement.innerHTML = `<div class='no-preview'>${label}</div>`;
+            
+            // Only show N/A label if we're sure we have no other options
+            const container = img.closest('.preview-container');
+            if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
         };
 
         function renderModTableBody(mods, tbodyId) {
@@ -1591,13 +1605,15 @@
                 const tr = document.createElement('tr');
                 
                 const safePackageId = mod.packageId.replace(/\./g, '_');
-                const isSteam = mod.steamId && mod.steamId !== "null";
+                const isSteam = mod.isWorkshop; // Use the explicit flag from C# for labeling
                 const label = isSteam ? "STEAM" : "LOCAL";
                 
-                let previewHtml = `<img src="Previews/${safePackageId}.png" class="mod-preview" 
-                    data-steam-id="${mod.steamId}"
-                    data-preview-url="${mod.previewUrl || ''}"
-                    onerror="handleImageError(this, '${label}')" />`;
+                let previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
+                    <img src="Previews/${safePackageId}.png" class="mod-preview" 
+                        data-steam-id="${mod.steamId}"
+                        data-preview-url="${mod.previewUrl || ''}"
+                        onerror="handleImageError(this, '${label}')" />
+                </div>`;
 
 
                 let statusClass = 'status-unknown';
