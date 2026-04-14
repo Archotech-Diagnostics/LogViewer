@@ -1542,7 +1542,7 @@
                 if (mod.previewImageBase64) {
                     previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
                 } else if (mod.steamId && mod.steamId !== "null") {
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.outerHTML='<div class=\\'no-preview\\'>N/A</div>'" />`;
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.outerHTML='<div class=&quot;no-preview&quot;>N/A</div>'" />`;
                 }
 
                 let statusClass = 'status-unknown';
