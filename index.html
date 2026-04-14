@@ -1204,17 +1204,35 @@
                 
                 activeMods.forEach(mod => {
                     mod.updateStatus = 'unknown';
-                    // Only check for updates if it's explicitly a Workshop mod
-                    if (mod.isWorkshop && mod.steamId && mod.steamId !== "null" && steamData[mod.steamId] && mod.localTime) {
-                        const steamTime = steamData[mod.steamId];
-                        const buffer = 86400; // 24 hours
-                        if (steamTime > (mod.localTime + buffer)) {
-                            mod.updateStatus = 'outdated';
-                        } else {
-                            mod.updateStatus = 'updated';
+                    if (mod.isWorkshop && mod.steamId && mod.steamId !== "null" && steamData[mod.steamId]) {
+                        const steamEntry = steamData[mod.steamId];
+                        
+                        // Handle both simple timestamp (old worker) and object (new worker)
+                        const steamTime = typeof steamEntry === 'object' ? steamEntry.time : steamEntry;
+                        const previewUrl = typeof steamEntry === 'object' ? steamEntry.url : null;
+                        
+                        if (previewUrl) mod.previewUrl = previewUrl;
+
+                        if (mod.localTime && steamTime) {
+                            const buffer = 86400; // 24 hours
+                            if (steamTime > (mod.localTime + buffer)) {
+                                mod.updateStatus = 'outdated';
+                            } else {
+                                mod.updateStatus = 'updated';
+                            }
                         }
                     }
                 });
+                
+                // If any preview URLs were found, refresh them in the UI instantly
+                document.querySelectorAll('.mod-preview[data-steam-id]').forEach(img => {
+                    const id = img.getAttribute('data-steam-id');
+                    const mod = activeMods.find(m => String(m.steamId) === id);
+                    if (mod && mod.previewUrl && img.src.includes('Previews/')) {
+                         img.src = mod.previewUrl;
+                    }
+                });
+
             } catch (e) {
                 console.error("Steam Update Check Failed:", e);
             }
@@ -1534,23 +1552,30 @@
         
         window.handleImageError = async function(img, label) {
             const steamId = img.getAttribute('data-steam-id');
+            const cachedUrl = img.getAttribute('data-preview-url');
+
+            // 1. Try our known high-speed cached URL first
+            if (cachedUrl && cachedUrl !== "" && !img.dataset.triedCache) {
+                img.dataset.triedCache = 'true';
+                img.src = cachedUrl;
+                return;
+            }
+
             if (steamId && steamId !== 'null' && !img.dataset.triedProxy) {
                 img.dataset.triedProxy = 'true';
                 try {
-                    // Try to fetch the real image via proxy scraping
+                    // 2. Try the scrape fallback as a last resort
                     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`;
                     const response = await fetch(proxyUrl);
                     const html = await response.text();
                     
-                    // Match the high-res workshop preview image
                     const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
                     if (match && match[1]) {
                         img.src = match[1];
                         return;
                     }
-                } catch (e) { console.error("Snapshot fetch failed", e); }
+                } catch (e) { }
             }
-            // Fallback to text label if everything fails
             img.parentElement.innerHTML = `<div class='no-preview'>${label}</div>`;
         };
 
@@ -1571,6 +1596,7 @@
                 
                 let previewHtml = `<img src="Previews/${safePackageId}.png" class="mod-preview" 
                     data-steam-id="${mod.steamId}"
+                    data-preview-url="${mod.previewUrl || ''}"
                     onerror="handleImageError(this, '${label}')" />`;
 
 
