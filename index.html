@@ -442,6 +442,7 @@
                     <button class="filter-btn active" data-upfilter="all" onclick="setUpdateFilter('all')">ALL</button>
                     <button class="filter-btn" data-upfilter="outdated" onclick="setUpdateFilter('outdated')">NEEDS UPDATE</button>
                     <button class="filter-btn" data-upfilter="updated" onclick="setUpdateFilter('updated')">UP TO DATE</button>
+                    <button class="filter-btn" data-upfilter="unknown" onclick="setUpdateFilter('unknown')">UNKNOWN</button>
                 </div>
 
                 <div id="mod-search-container" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
@@ -479,6 +480,13 @@
                 <h4>Conflicting Mods</h4>
                 <p>Orange messages usually denote two or more mods fighting over the same function. Check if you have multiple mods that try to change the same game mechanic.</p>
             </div>
+
+            <div class="help-section">
+                <h4>Mod Updates</h4>
+                <div class="color-row"><div class="status-dot status-up-to-date" style="margin:0"></div> <span><b>Green:</b> Mod is up to date with the latest Steam Workshop version.</span></div>
+                <div class="color-row"><div class="status-dot status-outdated" style="margin:0"></div> <span><b>Red:</b> A newer version is available on Steam. Recommendation: Update your mods.</span></div>
+                <div class="color-row"><div class="status-dot status-unknown" style="margin:0"></div> <span><b>Gray:</b> Unknown or Local mod. No Steam Workshop metadata available for comparison.</span></div>
+            </div>
         </div>
 
         <div id="enhanced-log" class="content-area hidden"></div>
@@ -503,8 +511,8 @@
                             <tr>
                                 <th class="order">#</th>
                                 <th>Image</th>
-                                <th>Status</th>
                                 <th>Mod Name</th>
+                                <th>Updated</th>
                                 <th>Package ID</th>
                                 <th>Author</th>
                                 <th>Versions</th>
@@ -532,8 +540,8 @@
                             <tr>
                                 <th class="order">#</th>
                                 <th>Image</th>
-                                <th>Status</th>
                                 <th>Mod Name</th>
+                                <th>Updated</th>
                                 <th>Package ID</th>
                                 <th>Author</th>
                                 <th>Versions</th>
@@ -1158,7 +1166,7 @@
                 
                 activeMods.forEach(mod => {
                     mod.updateStatus = 'unknown';
-                    if (mod.steamId && steamData[mod.steamId] && mod.localTime) {
+                    if (mod.steamId && mod.steamId !== "null" && steamData[mod.steamId] && mod.localTime) {
                         const steamTime = steamData[mod.steamId];
                         const buffer = 86400; // 24 hours
                         if (steamTime > (mod.localTime + buffer)) {
@@ -1492,11 +1500,10 @@
                 }
 
                 let statusClass = 'status-unknown';
-                let statusLabel = 'Unknown';
-                if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; statusLabel = 'Up to Date'; }
-                else if (mod.updateStatus === 'outdated') { statusClass = 'status-outdated'; statusLabel = 'Outdated'; }
+                if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
+                else if (mod.updateStatus === 'outdated') { statusClass = 'status-outdated'; }
                 
-                const statusHtml = `<div style="display:flex; align-items:center;"><span class="status-dot ${statusClass}"></span><span class="meta-value">${statusLabel}</span></div>`;
+                const statusHtml = `<div style="display:flex; align-items:center; justify-content:center;"><span class="status-dot ${statusClass}" style="margin:0" title="${mod.updateStatus}"></span></div>`;
 
                 let nameHtml = mod.name;
                 if (mod.steamId && mod.steamId !== "null") {
@@ -1511,8 +1518,8 @@
                 tr.innerHTML = `
                     <td class="order">${String(index).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
-                    <td>${statusHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
+                    <td>${statusHtml}</td>
                     <td class="meta-value" style="word-break: break-word;">${mod.packageId}</td>
                     <td class="meta-value">${mod.authors || 'Unknown'}</td>
                     <td>${versionsHtml}</td>
