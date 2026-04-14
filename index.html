@@ -596,22 +596,6 @@
     <script src="data.js" onerror="window.dataJsMissing = true;"></script>
     
     <script>
-        function handleImageFallback(imgElement, steamId) {
-            if (!imgElement.dataset.triedProxy && steamId && steamId !== 'undefined' && steamId !== 'null' && steamId !== '') {
-                // Step 1: Local failed, try Cloudflare proxy
-                imgElement.dataset.triedProxy = 'true';
-                imgElement.src = `https://archotech-proxy.kongkim.workers.dev/?steamId=${steamId}`;
-            } else {
-                // Step 2: Proxy failed or no SteamId, show N/A box
-                const fallback = document.createElement('div');
-                fallback.className = 'no-preview';
-                fallback.innerText = 'N/A';
-                if (imgElement.parentNode) {
-                    imgElement.parentNode.replaceChild(fallback, imgElement);
-                }
-            }
-        }
-
         const statusText = document.getElementById('status-text');
         const activeTabClass = 'active';
         let currentActiveTarget = null;
@@ -1549,16 +1533,22 @@
             tbody.innerHTML = '';
             
             // Ensure mods are sorted by their actual load order
-            const sortedMods = [...mods].sort((a, b) => (a.LoadOrder || 0) - (b.LoadOrder || 0));
+            const sortedMods = [...mods].sort((a, b) => (a.loadOrder || 0) - (b.loadOrder || 0));
 
             sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
-                // Robust Fallback: Local Path -> Steam CDN -> N/A Box
-                const localSrc = mod.LocalImagePath || 'empty';
-                const steamId = mod.SteamId || '';
-                const modName = mod.Name || 'Unknown Mod';
-                const previewHtml = `<img src="${localSrc}" alt="${modName}" class="mod-preview" onerror="handleImageFallback(this, '${steamId}')">`;
+                let previewHtml = `<div class="no-preview">N/A</div>`;
+                const steamId = mod.steamId || '';
+                const modName = mod.name || 'Unknown Mod';
+
+                if (mod.localImagePath) {
+                    previewHtml = `<img src="${mod.localImagePath}" alt="${modName}" class="mod-preview" onerror="this.onerror=null; if('${steamId}' && '${steamId}' !== 'null') { this.src='https://community.cloudflare.steamstatic.com/public/images/apps/294100/${steamId}.jpg'; } else { this.style.display='none'; }" />`;
+                } else if (steamId && steamId !== "null") {
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${steamId}.jpg" alt="${modName}" class="mod-preview" onerror="this.style.display='none'" />`;
+                } else if (mod.previewImageBase64) {
+                    previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
+                }
 
                 let statusClass = 'status-unknown';
                 if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
@@ -1572,18 +1562,17 @@
                 }
 
                 let versionsHtml = '';
-                const versions = mod.Version || '';
-                if (versions) {
-                    versionsHtml = versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('');
+                if (mod.versions) {
+                    versionsHtml = mod.versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('');
                 }
 
                 tr.innerHTML = `
-                    <td class="order">${String(mod.LoadOrder || 0).padStart(3, '0')}</td>
+                    <td class="order">${String(mod.loadOrder || 0).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
                     <td style="text-align: center;">${statusHtml}</td>
-                    <td class="meta-value" style="word-break: break-word;">${mod.PackageId}</td>
-                    <td class="meta-value">${mod.Authors || 'Unknown'}</td>
+                    <td class="meta-value" style="word-break: break-word;">${mod.packageId}</td>
+                    <td class="meta-value">${mod.authors || 'Unknown'}</td>
                     <td>${versionsHtml}</td>
                 `;
                 tbody.appendChild(tr);
