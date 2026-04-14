@@ -1549,15 +1549,16 @@
             tbody.innerHTML = '';
             
             // Ensure mods are sorted by their actual load order
-            const sortedMods = [...mods].sort((a, b) => (a.loadOrder || 0) - (b.loadOrder || 0));
+            const sortedMods = [...mods].sort((a, b) => (a.LoadOrder || 0) - (b.LoadOrder || 0));
 
             sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
                 // Robust Fallback: Local Path -> Steam CDN -> N/A Box
-                const localSrc = mod.localImagePath || 'empty';
-                const steamId = mod.steamId || '';
-                const previewHtml = `<img src="${localSrc}" alt="${mod.name}" class="mod-preview" onerror="handleImageFallback(this, '${steamId}')">`;
+                const localSrc = mod.LocalImagePath || 'empty';
+                const steamId = mod.SteamId || '';
+                const modName = mod.Name || 'Unknown Mod';
+                const previewHtml = `<img src="${localSrc}" alt="${modName}" class="mod-preview" onerror="handleImageFallback(this, '${steamId}')">`;
 
                 let statusClass = 'status-unknown';
                 if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
@@ -1565,23 +1566,24 @@
                 
                 const statusHtml = `<div style="display:flex; align-items:center; justify-content:center;"><span class="status-dot ${statusClass}" style="margin:0" title="${mod.updateStatus}"></span></div>`;
 
-                let nameHtml = mod.name;
-                if (mod.steamId && mod.steamId !== "null") {
-                    nameHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>`;
+                let nameHtml = modName;
+                if (steamId && steamId !== "null") {
+                    nameHtml = `<a href="https://steamcommunity.com/workshop/filedetails/?id=${steamId}" target="_blank">${modName}</a>`;
                 }
 
                 let versionsHtml = '';
-                if (mod.versions) {
-                    versionsHtml = mod.versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('');
+                const versions = mod.Version || '';
+                if (versions) {
+                    versionsHtml = versions.split(',').map(v => `<span class="version-tag">${v.trim()}</span>`).join('');
                 }
 
                 tr.innerHTML = `
-                    <td class="order">${String(mod.loadOrder || 0).padStart(3, '0')}</td>
+                    <td class="order">${String(mod.LoadOrder || 0).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
                     <td style="text-align: center;">${statusHtml}</td>
-                    <td class="meta-value" style="word-break: break-word;">${mod.packageId}</td>
-                    <td class="meta-value">${mod.authors || 'Unknown'}</td>
+                    <td class="meta-value" style="word-break: break-word;">${mod.PackageId}</td>
+                    <td class="meta-value">${mod.Authors || 'Unknown'}</td>
                     <td>${versionsHtml}</td>
                 `;
                 tbody.appendChild(tr);
