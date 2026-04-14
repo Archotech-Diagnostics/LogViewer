@@ -596,6 +596,22 @@
     <script src="data.js" onerror="window.dataJsMissing = true;"></script>
     
     <script>
+        function handleImageFallback(imgElement, steamId) {
+            if (!imgElement.dataset.triedProxy && steamId && steamId !== 'undefined' && steamId !== 'null' && steamId !== '') {
+                // Step 1: Local failed, try Cloudflare proxy
+                imgElement.dataset.triedProxy = 'true';
+                imgElement.src = `https://archotech-proxy.kongkim.workers.dev/?steamId=${steamId}`;
+            } else {
+                // Step 2: Proxy failed or no SteamId, show N/A box
+                const fallback = document.createElement('div');
+                fallback.className = 'no-preview';
+                fallback.innerText = 'N/A';
+                if (imgElement.parentNode) {
+                    imgElement.parentNode.replaceChild(fallback, imgElement);
+                }
+            }
+        }
+
         const statusText = document.getElementById('status-text');
         const activeTabClass = 'active';
         let currentActiveTarget = null;
@@ -1538,14 +1554,10 @@
             sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
-                let previewHtml = `<div class="no-preview">N/A</div>`;
-                if (mod.localImagePath) {
-                    // Chain: Local Path -> Steam CDN -> N/A Box
-                    previewHtml = `<img src="${mod.localImagePath}" class="mod-preview" onerror="this.onerror=null; if('${mod.steamId}' && '${mod.steamId}' !== 'null') { this.src='https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg'; this.onerror=function(){this.outerHTML='<div class=\\'no-preview\\'>N/A</div>'}; } else { this.outerHTML='<div class=\\'no-preview\\'>N/A</div>'; }" />`;
-                } else if (mod.steamId && mod.steamId !== "null") {
-                    // Fallback for online-only records or missing local copies
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.onerror=null; this.outerHTML='<div class=\\'no-preview\\'>N/A</div>';" />`;
-                }
+                // Robust Fallback: Local Path -> Steam CDN -> N/A Box
+                const localSrc = mod.localImagePath || 'empty';
+                const steamId = mod.steamId || '';
+                const previewHtml = `<img src="${localSrc}" alt="${mod.name}" class="mod-preview" onerror="handleImageFallback(this, '${steamId}')">`;
 
                 let statusClass = 'status-unknown';
                 if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
