@@ -1605,15 +1605,25 @@
                 const tr = document.createElement('tr');
                 
                 const safePackageId = mod.packageId.replace(/\./g, '_');
-                const isSteam = mod.isWorkshop; // Use the explicit flag from C# for labeling
+                const isSteam = mod.isWorkshop;
                 const label = isSteam ? "STEAM" : "LOCAL";
                 
-                let previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
-                    <img src="Previews/${safePackageId}.png" class="mod-preview" 
-                        data-steam-id="${mod.steamId}"
-                        data-preview-url="${mod.previewUrl || ''}"
-                        onerror="handleImageError(this, '${label}')" />
-                </div>`;
+                let previewHtml = "";
+                const isOnline = !window.archotechLocalData;
+
+                if (isOnline && !isSteam) {
+                    // Pre-emptive: Online local mod (Image will 100% fail, so show label immediately)
+                    previewHtml = `<div class="preview-container"><div class='no-preview'>LOCAL</div></div>`;
+                } else {
+                    // Local viewing OR workshop mod (Might resolve via proxy)
+                    previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
+                        <img src="Previews/${safePackageId}.png" class="mod-preview" 
+                            data-steam-id="${mod.steamId}"
+                            data-preview-url="${mod.previewUrl || ''}"
+                            onerror="handleImageError(this, '${label}')" />
+                    </div>`;
+                }
+
 
 
                 let statusClass = 'status-unknown';
