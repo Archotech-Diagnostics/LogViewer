@@ -1539,8 +1539,8 @@
                 const tr = document.createElement('tr');
                 
                 let previewHtml = `<div class="no-preview">N/A</div>`;
-                if (mod.previewImageBase64) {
-                    previewHtml = `<img src="${mod.previewImageBase64}" class="mod-preview" />`;
+                if (mod.packageId) {
+                    previewHtml = `<img src="previews/${mod.packageId}.jpg" class="mod-preview" onerror="this.outerHTML='<div class=&quot;no-preview&quot;>N/A</div>'" />`;
                 }
 
                 let statusClass = 'status-unknown';
