@@ -1531,6 +1531,28 @@
                 errorDiv.classList.remove('hidden');
             }
         }
+        
+        window.handleImageError = async function(img, label) {
+            const steamId = img.getAttribute('data-steam-id');
+            if (steamId && steamId !== 'null' && !img.dataset.triedProxy) {
+                img.dataset.triedProxy = 'true';
+                try {
+                    // Try to fetch the real image via proxy scraping
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`;
+                    const response = await fetch(proxyUrl);
+                    const html = await response.text();
+                    
+                    // Match the high-res workshop preview image
+                    const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
+                    if (match && match[1]) {
+                        img.src = match[1];
+                        return;
+                    }
+                } catch (e) { console.error("Snapshot fetch failed", e); }
+            }
+            // Fallback to text label if everything fails
+            img.parentElement.innerHTML = `<div class='no-preview'>${label}</div>`;
+        };
 
         function renderModTableBody(mods, tbodyId) {
             const tbody = document.getElementById(tbodyId);
@@ -1544,8 +1566,13 @@
                 const tr = document.createElement('tr');
                 
                 const safePackageId = mod.packageId.replace(/\./g, '_');
-                const label = (mod.steamId && mod.steamId !== "null") ? "STEAM" : "LOCAL";
-                let previewHtml = `<img src="Previews/${safePackageId}.png" class="mod-preview" onerror="this.parentElement.innerHTML='<div class=\\'no-preview\\'>${label}</div>'" />`;
+                const isSteam = mod.steamId && mod.steamId !== "null";
+                const label = isSteam ? "STEAM" : "LOCAL";
+                
+                let previewHtml = `<img src="Previews/${safePackageId}.png" class="mod-preview" 
+                    data-steam-id="${mod.steamId}"
+                    onerror="handleImageError(this, '${label}')" />`;
+
 
                 let statusClass = 'status-unknown';
                 if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
