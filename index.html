@@ -544,7 +544,7 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th class="order">#</th>
+                                <th class="order">Order</th>
                                 <th>Image</th>
                                 <th>Mod Name</th>
                                 <th style="text-align: center;">Updated</th>
@@ -573,7 +573,7 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th class="order">#</th>
+                                <th class="order">Order</th>
                                 <th>Image</th>
                                 <th>Mod Name</th>
                                 <th style="text-align: center;">Updated</th>
@@ -1532,7 +1532,10 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             
-            mods.forEach((mod, index) => {
+            // Ensure mods are sorted by their actual load order
+            const sortedMods = [...mods].sort((a, b) => (a.loadOrder || 0) - (b.loadOrder || 0));
+
+            sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
                 let previewHtml = `<div class="no-preview">N/A</div>`;
@@ -1559,7 +1562,7 @@
                 }
 
                 tr.innerHTML = `
-                    <td class="order">${String(index).padStart(3, '0')}</td>
+                    <td class="order">${String(mod.loadOrder || 0).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
                     <td style="text-align: center;">${statusHtml}</td>
