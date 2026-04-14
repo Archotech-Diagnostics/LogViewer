@@ -679,6 +679,9 @@
 
             if (isModListTab) {
                 modFilterBar.classList.remove('hidden');
+                // Reset mod list filters to 'ALL' when switching to the tab
+                setCompareFilter('all');
+                setUpdateFilter('all');
             } else {
                 modFilterBar.classList.add('hidden');
             }
@@ -1402,6 +1405,7 @@
         }
 
         function setUpdateFilter(filter) {
+            if (currentUpdateFilter === filter) filter = 'all';
             currentUpdateFilter = filter;
             document.querySelectorAll('[data-upfilter]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.upfilter === filter);
@@ -1410,6 +1414,7 @@
         }
 
         function setCompareFilter(filterParam) {
+            if (currentCompareFilter === filterParam && filterParam !== 'all') filterParam = 'all';
             currentCompareFilter = filterParam;
             
             ['all', 'shared', 'left', 'right'].forEach(f => {
@@ -1538,9 +1543,10 @@
             sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
-                let previewHtml = `<div class="no-preview">Local Mod</div>`;
+                let previewHtml = `<div class="no-preview">LOCAL</div>`;
                 if (mod.steamId && mod.steamId !== "null") {
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.parentElement.innerHTML='<div class=\\'no-preview\\'>N/S</div>'" />`;
+                    // Note: The community.cloudflare URL is for store icons; most workshop items will trigger the onerror fallback.
+                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.parentElement.innerHTML='<div class=\\'no-preview\\'>N/A</div>'" />`;
                 }
 
                 let statusClass = 'status-unknown';
