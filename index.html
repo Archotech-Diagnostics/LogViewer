@@ -1543,11 +1543,9 @@
             sortedMods.forEach((mod, index) => {
                 const tr = document.createElement('tr');
                 
-                let previewHtml = `<div class="no-preview">LOCAL</div>`;
-                if (mod.steamId && mod.steamId !== "null") {
-                    // Note: The community.cloudflare URL is for store icons; most workshop items will trigger the onerror fallback.
-                    previewHtml = `<img src="https://community.cloudflare.steamstatic.com/public/images/apps/294100/${mod.steamId}.jpg" class="mod-preview" onerror="this.parentElement.innerHTML='<div class=\\'no-preview\\'>N/A</div>'" />`;
-                }
+                const safePackageId = mod.packageId.replace(/\./g, '_');
+                const label = (mod.steamId && mod.steamId !== "null") ? "STEAM" : "LOCAL";
+                let previewHtml = `<img src="Previews/${safePackageId}.png" class="mod-preview" onerror="this.parentElement.innerHTML='<div class=\\'no-preview\\'>${label}</div>'" />`;
 
                 let statusClass = 'status-unknown';
                 if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
