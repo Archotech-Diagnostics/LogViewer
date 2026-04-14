@@ -60,9 +60,12 @@
         .status-dot {
             height: 10px;
             width: 10px;
+            min-width: 10px;
+            min-height: 10px;
             border-radius: 50%;
             display: inline-block;
-            margin-right: 6px;
+            flex-shrink: 0;
+            margin: 0;
         }
         .status-up-to-date { background-color: #4caf50; box-shadow: 0 0 5px #4caf50; }
         .status-outdated { background-color: #f44336; box-shadow: 0 0 5px #f44336; }
@@ -353,9 +356,41 @@
             font-size: 0.9em;
             display: none;
         }
+
+        /* Loading Splash */
+        #loading-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        .loading-text {
+            color: #c7cb00;
+            font-family: 'Consolas', monospace;
+            font-size: 24px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
     </style>
 </head>
 <body>
+    <div id="loading-splash">
+        <div class="loading-text">LogViewer Loading...</div>
+    </div>
 
     <!-- Compact sticky top: title + status + tabs + notices — all stay visible on scroll -->
     <div class="sticky-top">
@@ -512,7 +547,7 @@
                                 <th class="order">#</th>
                                 <th>Image</th>
                                 <th>Mod Name</th>
-                                <th>Updated</th>
+                                <th style="text-align: center;">Updated</th>
                                 <th>Package ID</th>
                                 <th>Author</th>
                                 <th>Versions</th>
@@ -541,7 +576,7 @@
                                 <th class="order">#</th>
                                 <th>Image</th>
                                 <th>Mod Name</th>
-                                <th>Updated</th>
+                                <th style="text-align: center;">Updated</th>
                                 <th>Package ID</th>
                                 <th>Author</th>
                                 <th>Versions</th>
@@ -1166,7 +1201,8 @@
                 
                 activeMods.forEach(mod => {
                     mod.updateStatus = 'unknown';
-                    if (mod.steamId && mod.steamId !== "null" && steamData[mod.steamId] && mod.localTime) {
+                    // Only check for updates if it's explicitly a Workshop mod
+                    if (mod.isWorkshop && mod.steamId && mod.steamId !== "null" && steamData[mod.steamId] && mod.localTime) {
                         const steamTime = steamData[mod.steamId];
                         const buffer = 86400; // 24 hours
                         if (steamTime > (mod.localTime + buffer)) {
@@ -1303,6 +1339,13 @@
 
             if (urlTab) firstActive = urlTab;
             if (firstActive) switchTab(firstActive);
+
+            // Hide loading splash
+            const splash = document.getElementById('loading-splash');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 550);
+            }
         }
 
         function shareComparison() {
@@ -1519,7 +1562,7 @@
                     <td class="order">${String(index).padStart(3, '0')}</td>
                     <td>${previewHtml}</td>
                     <td class="mod-name-cell">${nameHtml}</td>
-                    <td>${statusHtml}</td>
+                    <td style="text-align: center;">${statusHtml}</td>
                     <td class="meta-value" style="word-break: break-word;">${mod.packageId}</td>
                     <td class="meta-value">${mod.authors || 'Unknown'}</td>
                     <td>${versionsHtml}</td>
