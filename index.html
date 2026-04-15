@@ -1327,7 +1327,8 @@
                         myModsCache.forEach(m => {
                             let statusNote = "";
                             if (m.updateStatus === 'outdated') statusNote = " [OUT OF DATE - Update on Steam]";
-                            masterText += `- ${m.name}${statusNote} | ID: ${m.packageId} | Version: ${m.versions || 'Unknown'}\n`;
+                            let updatedNote = m.localTime ? ` | Updated: ${new Date(m.localTime * 1000).toLocaleString()}` : "";
+                            masterText += `- ${m.name}${statusNote} | ID: ${m.packageId} | Version: ${m.versions || 'Unknown'}${updatedNote}\n`;
                         });
                     } else {
                         masterText += "No mod list available.\n";
@@ -1640,10 +1641,22 @@
 
 
                 let statusClass = 'status-unknown';
-                if (mod.updateStatus === 'updated') { statusClass = 'status-up-to-date'; }
-                else if (mod.updateStatus === 'outdated') { statusClass = 'status-outdated'; }
+                let statusTitle = 'Unknown status';
+                if (mod.updateStatus === 'updated') { 
+                    statusClass = 'status-up-to-date'; 
+                    statusTitle = 'Up to date';
+                }
+                else if (mod.updateStatus === 'outdated') { 
+                    statusClass = 'status-outdated'; 
+                    statusTitle = 'Outdated - Update available on Steam';
+                }
                 
-                const statusHtml = `<div style="display:flex; align-items:center; justify-content:center;"><span class="status-dot ${statusClass}" style="margin:0" title="${mod.updateStatus}"></span></div>`;
+                if (mod.localTime) {
+                    const dateStr = new Date(mod.localTime * 1000).toLocaleString();
+                    statusTitle += `\nLocal Version: ${dateStr}`;
+                }
+                
+                const statusHtml = `<div style="display:flex; align-items:center; justify-content:center;"><span class="status-dot ${statusClass}" style="margin:0" title="${statusTitle}"></span></div>`;
 
                 let nameHtml = mod.name;
                 if (mod.steamId && mod.steamId !== "null") {
