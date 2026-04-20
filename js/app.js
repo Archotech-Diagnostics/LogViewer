@@ -835,7 +835,8 @@ async function init() {
                 } catch(_) {}
             }
 
-            statusText.innerText = (archotechTranslations["KK_AD_Viewer_OnlineRecord"] || "Online Diagnostic Record - {0}").replace("{0}", exportTime);
+            statusText.innerText = `Online Diagnostic Record - ${exportTime}`;
+            
             document.getElementById('online-notice').classList.remove('hidden');
             await renderData();
             buildDiagnosisLegend();
@@ -844,12 +845,14 @@ async function init() {
         let exportTime = "Connected";
         if (window.archotechLocalData["AI_DIAGNOSTICS.json"]) {
             try {
-                const parsed = JSON.parse(window.archotechLocalData["AI_DIAGNOSTICS.json"]);
+                const parsed = typeof window.archotechLocalData["AI_DIAGNOSTICS.json"] === 'string' 
+                    ? JSON.parse(window.archotechLocalData["AI_DIAGNOSTICS.json"]) 
+                    : window.archotechLocalData["AI_DIAGNOSTICS.json"];
                 if (parsed.session && parsed.session.sessionId) exportTime = parsed.session.sessionId.replace('T', ' ');
             } catch(_) {}
         }
 
-        statusText.innerText = (archotechTranslations["KK_AD_Viewer_LocalRecordSuccess"] || "Local Diagnostic Record - {0}").replace("{0}", exportTime);
+        statusText.innerText = `Local Diagnostic Record - ${exportTime}`;
         // Local data.js payloads are NOT compressed (written directly by C# to disk).
         // Apply encyclopedia mapping to structured JSON for consistency.
         const keys = { "AI_DIAGNOSTICS.json": "ai_diagnostic", "ENHANCED_RAW_LOG.txt": "enhanced_log", "SESSION_LOG_DUMP.txt": "session_log", "UNKNOWN_TRACE_REPORT.txt": "trace_report", "MOD_LIST.json": "mod_list", "Player.log": "player_log", "LOAD_TIME_DATA.json": "load_time_data", "PERF_SCAN_DATA.json": "perf_scan_data", "COLOR_LEGEND_HTML.txt": "color_legend" };
