@@ -826,13 +826,30 @@ async function init() {
                 }
             }
 
-            statusText.innerText = (archotechTranslations["KK_AD_Viewer_OnlineRecord"] || "Online Diagnostic Record [{0}]").replace("{0}", gistId);
+            // Try to extract the real export time from the AI diagnostics metadata
+            let exportTime = gistId;
+            if (loadedData.ai_diagnostic) {
+                try {
+                    const parsed = JSON.parse(loadedData.ai_diagnostic);
+                    if (parsed.session && parsed.session.sessionId) exportTime = parsed.session.sessionId.replace('T', ' ');
+                } catch(_) {}
+            }
+
+            statusText.innerText = (archotechTranslations["KK_AD_Viewer_OnlineRecord"] || "Online Diagnostic Record - {0}").replace("{0}", exportTime);
             document.getElementById('online-notice').classList.remove('hidden');
             await renderData();
             buildDiagnosisLegend();
         } catch (e) { statusText.innerText = "Linkage Error"; console.error('[Archotech] init error:', e); }
     } else if (window.archotechLocalData) {
-        statusText.innerText = archotechTranslations["KK_AD_Viewer_LocalRecordSuccess"] || "Local Diagnostic Record (Secure Handshake Success)";
+        let exportTime = "Connected";
+        if (window.archotechLocalData["AI_DIAGNOSTICS.json"]) {
+            try {
+                const parsed = JSON.parse(window.archotechLocalData["AI_DIAGNOSTICS.json"]);
+                if (parsed.session && parsed.session.sessionId) exportTime = parsed.session.sessionId.replace('T', ' ');
+            } catch(_) {}
+        }
+
+        statusText.innerText = (archotechTranslations["KK_AD_Viewer_LocalRecordSuccess"] || "Local Diagnostic Record - {0}").replace("{0}", exportTime);
         // Local data.js payloads are NOT compressed (written directly by C# to disk).
         // Apply encyclopedia mapping to structured JSON for consistency.
         const keys = { "AI_DIAGNOSTICS.json": "ai_diagnostic", "ENHANCED_RAW_LOG.txt": "enhanced_log", "SESSION_LOG_DUMP.txt": "session_log", "UNKNOWN_TRACE_REPORT.txt": "trace_report", "MOD_LIST.json": "mod_list", "Player.log": "player_log", "LOAD_TIME_DATA.json": "load_time_data", "PERF_SCAN_DATA.json": "perf_scan_data", "COLOR_LEGEND_HTML.txt": "color_legend" };
