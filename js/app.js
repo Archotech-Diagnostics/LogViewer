@@ -826,13 +826,10 @@ async function init() {
                 }
             }
 
-            // Try to extract the real export time from the AI diagnostics metadata
+            // Extract the exact creation time directly from the GitHub Gist metadata
             let exportTime = gistId;
-            if (loadedData.ai_diagnostic) {
-                try {
-                    const parsed = JSON.parse(loadedData.ai_diagnostic);
-                    if (parsed.session && parsed.session.sessionId) exportTime = parsed.session.sessionId.replace('T', ' ');
-                } catch(_) {}
+            if (data.created_at) {
+                exportTime = new Date(data.created_at).toLocaleString();
             }
 
             statusText.innerText = `Online Diagnostic Record - ${exportTime}`;
@@ -842,14 +839,10 @@ async function init() {
             buildDiagnosisLegend();
         } catch (e) { statusText.innerText = "Linkage Error"; console.error('[Archotech] init error:', e); }
     } else if (window.archotechLocalData) {
+        // Extract the timestamp injected directly by ExportManager.cs
         let exportTime = "Connected";
-        if (window.archotechLocalData["AI_DIAGNOSTICS.json"]) {
-            try {
-                const parsed = typeof window.archotechLocalData["AI_DIAGNOSTICS.json"] === 'string' 
-                    ? JSON.parse(window.archotechLocalData["AI_DIAGNOSTICS.json"]) 
-                    : window.archotechLocalData["AI_DIAGNOSTICS.json"];
-                if (parsed.session && parsed.session.sessionId) exportTime = parsed.session.sessionId.replace('T', ' ');
-            } catch(_) {}
+        if (window.archotechLocalData._timestamp) {
+            exportTime = new Date(window.archotechLocalData._timestamp).toLocaleString();
         }
 
         statusText.innerText = `Local Diagnostic Record - ${exportTime}`;
