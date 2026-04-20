@@ -466,7 +466,7 @@ function renderPerfScanData(data) {
 
 
         // -- System Health Header (mirrors hasCritical / DrawResults) --
-        const hasCritical = records.some(e => !e.IsFramework && (e.Score === 'Severe' || e.Score === 'Critical'));
+        const hasCritical = records.some(e => !e.IsFramework && (e.ModName !== (trans['KK_AD_CoreEngineName'] || 'Core Engine (Vanilla / System)')) && (e.Score === 'Severe' || e.Score === 'Critical'));
         const healthColor  = hasCritical ? '#ff4d4d' : '#44cc44';
         const healthLabel  = hasCritical
             ? (trans['KK_AD_Header_CriticalBottleneck'] || '⚠ CRITICAL BOTTLENECK DETECTED')
@@ -487,19 +487,19 @@ function renderPerfScanData(data) {
         }
 
         // World Pawn Bloat
-        if (json.WorldPawnCount && json.WorldPawnCount >= 1500) {
+        if (json.WorldPawnCount && json.WorldPawnCount >= 1000) {
             const worldStr = trans['KK_AD_WorldPawnBloat'] ? trans['KK_AD_WorldPawnBloat'].replace('{0}', json.WorldPawnCount) : `WORLD PAWN BLOAT: Detected ${json.WorldPawnCount} world pawns.`;
             bloatHtml += `<div style="font-size:11px; color:#ffff00; margin-top:2px;">${worldStr}</div>`;
         }
 
         // Active Map Bloat
-        if (json.ActiveMapFilthCount && json.ActiveMapFilthCount > 2000) {
+        if (json.ActiveMapFilthCount && json.ActiveMapFilthCount >= 1000) {
             const bloatStr = trans['KK_AD_ActiveMapBloat'] ? trans['KK_AD_ActiveMapBloat'].replace('{0}', json.ActiveMapFilthCount) : `ACTIVE MAP BLOAT: Detected ${json.ActiveMapFilthCount} filth items.`;
             bloatHtml += `<div title="${trans['KK_AD_ActiveMapBloat'] || ''}" style="font-size:11px; color:#888; margin-top:2px; cursor:help;">${bloatStr}</div>`;
         }
 
         // History/Tale Bloat
-        if (json.TaleCount && json.TaleCount > 500) {
+        if (json.TaleCount && json.TaleCount >= 300) {
             const taleStr = trans['KK_AD_TaleBloat'] ? trans['KK_AD_TaleBloat'].replace('{0}', json.TaleCount) : `TALE LOG BLOAT: Detected ${json.TaleCount} historical tales.`;
             bloatHtml += `<div style="font-size:11px; color:#ff9933; margin-top:2px;">${taleStr}</div>`;
         }
