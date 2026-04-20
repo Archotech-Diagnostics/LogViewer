@@ -1,0 +1,71 @@
+/* Log Colors - Exact match to LogColorizer.cs */
+.log-info     { color: #ffffff; }
+.log-warn     { color: #ffff00; font-weight: bold; }
+.log-error    { color: #ff0000; font-weight: bold; }
+.log-deep-err { color: #ff4d4d; font-weight: bold; }
+.log-harmony  { color: #ff80cc; }
+.log-conflict { color: #ff991a; font-weight: bold; }
+.log-custom   { color: #66e5ff; }
+
+/* Stack trace / grey helpers */
+.log-rimworld-gray { color: #555555; }
+.log-meta     { color: #44cc44; }
+
+/* Enhanced Log Specifics */
+.enhanced-log-entry {
+    border-top: 1px solid #2e2e26;
+    padding: 6px 0;
+    margin-top: 2px; 
+}
+.enhanced-log-entry:first-of-type {
+    border-top: none;
+}
+
+/* Supplemental Log Blocks */
+.log-block { display: block; }
+
+/* Force stack traces to inherit the parent log entry color, but with slight dimming */
+.stack-trace, 
+pre, 
+.log-trace {
+    color: inherit !important; /* CRITICAL: FORCES INHERITANCE */
+    opacity: 0.85; 
+    font-size: 0.92em;
+}
+
+/* Log Filter Bar UI */
+.filter-bar, .mod-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0 6px 0;
+    flex-wrap: wrap;
+    border-top: 1px solid #2e2e26;
+    margin-top: 4px;
+}
+.mod-filter-bar { border-top: none; padding-bottom: 8px; }
+.filter-label {
+    font-size: 10px;
+    color: #5a5b49;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 2px;
+}
+.filter-btn {
+    background: #0d0d0a;
+    border: 1px solid #3a3a30;
+    color: #6f7456;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.filter-btn:hover, .filter-btn.active {
+    border-color: #6f7456;
+    color: #c7cb00;
+    background: #1e1e18;
+}
+.filter-dot { font-size: 14px; line-height: 0; margin-bottom: 2px; }
