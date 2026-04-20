@@ -5,6 +5,38 @@
  */
 
 /* ── GLOBALS ───────────────────────────────────────────────────────────────── */
+
+/**
+ * Static encyclopedia dictionary loaded from Encyclopedia.json.
+ * Maps short IDs (e.g. "Expl_NullRef") to full translation key strings
+ * (e.g. "KK_AD_IssueExpl_NullRef") which are then resolved via archotechTranslations.
+ * Also maps raw KK_AD_ keys directly to their English text for Enhanced Log rendering.
+ */
+let archotechEncyclopedia = {};
+
+/**
+ * Fetch and cache the static Encyclopedia.json dictionary.
+ * Tries a relative path (local file:// mode) then the GitHub Pages root.
+ * Fails silently — the viewer degrades gracefully without it.
+ */
+async function loadEncyclopedia() {
+    const paths = [
+        './Encyclopedia.json',
+        'https://archotech-diagnostics.github.io/LogViewer/Encyclopedia.json'
+    ];
+    for (const p of paths) {
+        try {
+            const res = await fetch(p);
+            if (res.ok) {
+                archotechEncyclopedia = await res.json();
+                console.log(`[Archotech] Encyclopedia loaded from ${p} (${Object.keys(archotechEncyclopedia).length} entries).`);
+                return;
+            }
+        } catch (_) { /* try next path */ }
+    }
+    console.warn('[Archotech] Encyclopedia.json could not be loaded. Dictionary mapping disabled.');
+}
+
 const statusText = document.getElementById('status-text');
 const activeTabClass = 'active';
 let currentActiveTarget = null;
@@ -611,8 +643,120 @@ const handleImageError = async (img, label) => {
     if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
 };
 
+/* ── GIST 2.0 PIPELINE HELPERS ─────────────────────────────────────────────── */
+
+/**
+ * THE STITCHER — reassembles chunked Gist files.
+ * If a logical file was split into "NAME_part1.txt", "NAME_part2.txt", … this
+ * function concatenates them in order and returns a clean {name → content} map
+ * with the synthetic part files removed.
+ *
+ * @param   {Object} files  Raw Gist files object from the GitHub API.
+ * @returns {Object}        Cleaned map with parts assembled.
+ */
+function stitchParts(files) {
+    const result = {};
+    const partMap = {}; // baseName → { index → content }
+
+    for (const [filename, fileObj] of Object.entries(files)) {
+        const content = fileObj?.content ?? fileObj ?? '';
+        // Match pattern: BASENAME_partN.EXT  (e.g. ENHANCED_RAW_LOG_part2.txt)
+        const m = filename.match(/^(.+?)_part(\d+)(\.[^.]+)?$/);
+        if (m) {
+            const base = m[1] + (m[3] || '');
+            const idx  = parseInt(m[2], 10);
+            if (!partMap[base]) partMap[base] = {};
+            partMap[base][idx] = content;
+        } else {
+            result[filename] = content;
+        }
+    }
+
+    // Reassemble each chunked file in ascending part order
+    for (const [base, parts] of Object.entries(partMap)) {
+        const sorted = Object.keys(parts)
+            .map(Number)
+            .sort((a, b) => a - b);
+        result[base] = sorted.map(i => parts[i]).join('');
+    }
+
+    return result;
+}
+
+/**
+ * DECOMPRESSOR — detects and inflates a GZip+Base64 encoded string.
+ * If the string is valid Base64 and pako is available it is decompressed;
+ * otherwise it is returned as-is (backward-compatible with old plain-text Gists).
+ *
+ * @param   {string} str  Raw content string from a Gist file.
+ * @returns {string}      Decompressed UTF-8 string, or the original string.
+ */
+function decodeAndDecompress(str) {
+    if (!str || typeof str !== 'string') return str;
+
+    // Detect Base64: only A-Z, a-z, 0-9, +, /, = (no spaces, no ## colour codes)
+    const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(str.trim()) && !str.includes('\n');
+    if (!isBase64) return str; // plain text payload — return as-is
+
+    if (typeof pako === 'undefined') {
+        console.warn('[Archotech] pako not loaded — cannot decompress GZip payload. Returning raw Base64.');
+        return str;
+    }
+
+    try {
+        const binaryStr = atob(str.trim());
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        return pako.inflate(bytes, { to: 'string' });
+    } catch (e) {
+        console.warn('[Archotech] GZip decompression failed, treating as plain text.', e);
+        return str;
+    }
+}
+
+/**
+ * ENCYCLOPEDIA MAPPER — traverses a data object/string and substitutes
+ * any string value that is a known encyclopedia key with its full text.
+ *
+ * Resolution order:
+ *   1. archotechEncyclopedia[value] → the mapped key string (e.g. "KK_AD_IssueExpl_NullRef")
+ *   2. archotechTranslations[mappedKey] → the human-readable translated string
+ *   3. If only step 1 succeeds → return the KK_AD_ key (translations may arrive later)
+ *   4. No match → return original value unchanged.
+ *
+ * @param   {*} data  Any JSON-parsed value.
+ * @returns {*}       The same structure with encyclopedia values substituted.
+ */
+function applyEncyclopedia(data) {
+    if (!data || !Object.keys(archotechEncyclopedia).length) return data;
+
+    if (typeof data === 'string') {
+        const mapped = archotechEncyclopedia[data];
+        if (!mapped) return data;
+        // mapped is a KK_AD_ key — resolve it through translations if possible
+        return archotechTranslations[mapped] || mapped;
+    }
+
+    if (Array.isArray(data)) {
+        return data.map(item => applyEncyclopedia(item));
+    }
+
+    if (typeof data === 'object' && data !== null) {
+        const out = {};
+        for (const [k, v] of Object.entries(data)) {
+            out[k] = applyEncyclopedia(v);
+        }
+        return out;
+    }
+
+    return data;
+}
+
 /* ── BOOTLOADER ────────────────────────────────────────────────────────────── */
 async function init() {
+    // ── Phase 0: Load static Encyclopedia before anything else ──────────────
+    await loadEncyclopedia();
+
     const i18nDict = window.archotechLocalData ? window.archotechLocalData["I18N_DICT.json"] : null;
     if (i18nDict) {
         archotechTranslations = JSON.parse(i18nDict);
@@ -637,29 +781,72 @@ async function init() {
             const response = await fetch(`https://api.github.com/gists/${gistId}`);
             const data = await response.json();
             if (data.files) {
-                loadedData.ai_diagnostic = data.files["AI_DIAGNOSTICS.json"]?.content;
-                loadedData.enhanced_log = data.files["ENHANCED_RAW_LOG.txt"]?.content;
-                loadedData.session_log = data.files["SESSION_LOG_DUMP.txt"]?.content;
-                loadedData.trace_report = data.files["UNKNOWN_TRACE_REPORT.txt"]?.content;
-                loadedData.mod_list = data.files["MOD_LIST.json"]?.content;
-                loadedData.player_log = data.files["Player.log"]?.content;
-                loadedData.load_time_data = data.files["LOAD_TIME_DATA.json"]?.content;
-                loadedData.perf_scan_data = data.files["PERF_SCAN_DATA.json"]?.content;
-                loadedData.color_legend = data.files["COLOR_LEGEND_HTML.txt"]?.content;
-                
-                const i18nContent = data.files["I18N_DICT.json"]?.content;
-                if (i18nContent) archotechTranslations = JSON.parse(i18nContent);
+                // ── Phase 1: Stitch chunked part files back into whole files ──
+                const stitched = stitchParts(data.files);
+
+                // ── Phase 2: Decompress each file (GZip+Base64 → plain text) ──
+                const decompress = (key) => decodeAndDecompress(stitched[key] ?? '');
+
+                loadedData.ai_diagnostic  = decompress("AI_DIAGNOSTICS.json");
+                loadedData.enhanced_log   = decompress("ENHANCED_RAW_LOG.txt");
+                loadedData.session_log    = decompress("SESSION_LOG_DUMP.txt");
+                loadedData.trace_report   = decompress("UNKNOWN_TRACE_REPORT.txt");
+                loadedData.mod_list       = decompress("MOD_LIST.json");
+                loadedData.player_log     = decompress("Player.log") || null;
+                loadedData.load_time_data = decompress("LOAD_TIME_DATA.json");
+                loadedData.perf_scan_data = decompress("PERF_SCAN_DATA.json");
+                loadedData.color_legend   = decompress("COLOR_LEGEND_HTML.txt");
+
+                // ── Phase 3: Load translations (also compressed) ──────────────
+                const i18nRaw = decompress("I18N_DICT.json");
+                if (i18nRaw) {
+                    try { archotechTranslations = JSON.parse(i18nRaw); } catch (_) {}
+                }
+
+                // ── Phase 4: Apply Encyclopedia mapping to structured JSON data ─
+                // Text files (logs) are resolved inline by the renderer which reads
+                // archotechTranslations. Only structured JSON objects need the deep map.
+                if (loadedData.ai_diagnostic) {
+                    try {
+                        const parsed = JSON.parse(loadedData.ai_diagnostic);
+                        loadedData.ai_diagnostic = JSON.stringify(applyEncyclopedia(parsed), null, 2);
+                    } catch (_) { /* not valid JSON, leave as-is */ }
+                }
+                if (loadedData.perf_scan_data) {
+                    try {
+                        const parsed = JSON.parse(loadedData.perf_scan_data);
+                        loadedData.perf_scan_data = applyEncyclopedia(parsed);
+                    } catch (_) { /* leave as-is */ }
+                }
+                if (loadedData.load_time_data) {
+                    try {
+                        const parsed = JSON.parse(loadedData.load_time_data);
+                        loadedData.load_time_data = applyEncyclopedia(parsed);
+                    } catch (_) { /* leave as-is */ }
+                }
             }
 
             statusText.innerText = (archotechTranslations["KK_AD_Viewer_OnlineRecord"] || "Online Diagnostic Record [{0}]").replace("{0}", gistId);
             document.getElementById('online-notice').classList.remove('hidden');
             await renderData();
             buildDiagnosisLegend();
-        } catch (e) { statusText.innerText = "Linkage Error"; }
+        } catch (e) { statusText.innerText = "Linkage Error"; console.error('[Archotech] init error:', e); }
     } else if (window.archotechLocalData) {
         statusText.innerText = archotechTranslations["KK_AD_Viewer_LocalRecordSuccess"] || "Local Diagnostic Record (Secure Handshake Success)";
+        // Local data.js payloads are NOT compressed (written directly by C# to disk).
+        // Apply encyclopedia mapping to structured JSON for consistency.
         const keys = { "AI_DIAGNOSTICS.json": "ai_diagnostic", "ENHANCED_RAW_LOG.txt": "enhanced_log", "SESSION_LOG_DUMP.txt": "session_log", "UNKNOWN_TRACE_REPORT.txt": "trace_report", "MOD_LIST.json": "mod_list", "Player.log": "player_log", "LOAD_TIME_DATA.json": "load_time_data", "PERF_SCAN_DATA.json": "perf_scan_data", "COLOR_LEGEND_HTML.txt": "color_legend" };
         Object.entries(keys).forEach(([f, k]) => { loadedData[k] = window.archotechLocalData[f]; });
+
+        // Apply encyclopedia to local structured data too
+        for (const key of ['perf_scan_data', 'load_time_data']) {
+            if (loadedData[key] && typeof loadedData[key] === 'string') {
+                try { loadedData[key] = applyEncyclopedia(JSON.parse(loadedData[key])); } catch (_) {}
+            } else if (loadedData[key] && typeof loadedData[key] === 'object') {
+                loadedData[key] = applyEncyclopedia(loadedData[key]);
+            }
+        }
+
         await renderData();
         buildDiagnosisLegend();
     }
