@@ -532,48 +532,83 @@ function shareComparison() {
 
 /* ── STEAM PROXY ───────────────────────────────────────────────────────────── */
 async function fetchSteamUpdates(activeMods) {
+    // SECURITY: Do not fetch Steam metadata if we are in Local mode unless specifically necessary.
+    // (Existing logic: fetching is fine as we want update dots even locally)
     const steamIds = activeMods.map(m => String(m.steamId)).filter(id => id && id !== "null" && id.length > 5);
     if (steamIds.length === 0) return;
+
     try {
         const response = await fetch('https://dry-sound-5694archotech-log-proxy.kongkim-cdb.workers.dev/', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(steamIds)
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(steamIds)
         });
+
         if (!response.ok) return;
         const steamData = await response.json();
+
         activeMods.forEach(mod => {
             mod.updateStatus = 'unknown';
-            if (mod.isWorkshop && mod.steamId && steamData[mod.steamId]) {
+            if (mod.steamId && steamData[mod.steamId]) {
                 const entry = steamData[mod.steamId];
-                const sTime = typeof entry === 'object' ? entry.time : entry;
-                if (entry.url) mod.previewUrl = entry.url;
-                if (mod.localTime && sTime) {
-                    mod.updateStatus = (sTime > (mod.localTime + 86400)) ? 'outdated' : 'updated';
+                if (typeof entry === 'object') {
+                    if (entry.url) mod.previewUrl = entry.url;
+                    if (mod.localTime && entry.time) {
+                        mod.updateStatus = (entry.time > (mod.localTime + 86400)) ? 'outdated' : 'updated';
+                    }
+                } else if (mod.localTime) {
+                    mod.updateStatus = (entry > (mod.localTime + 86400)) ? 'outdated' : 'updated';
                 }
             }
         });
-        // In-place refresh of thumbnails
-        document.querySelectorAll('.preview-container').forEach(c => {
-            const id = c.getAttribute('data-steam-id') || c.querySelector('img')?.getAttribute('data-steam-id');
+
+        // REFRESH: Instantly update all visible images with the newly acquired Steam URLs
+        document.querySelectorAll('.mod-preview').forEach(img => {
+            const id = img.getAttribute('data-steam-id');
             const m = activeMods.find(mod => String(mod.steamId) === id);
-            if (m && m.previewUrl) {
-                const img = c.querySelector('img');
-                if (img) img.src = m.previewUrl; else c.innerHTML = `<img src="${m.previewUrl}" class="mod-preview" />`;
+            if (m && m.previewUrl && img.src !== m.previewUrl) {
+                img.style.opacity = '0';
+                img.src = m.previewUrl;
+                img.onload = () => img.style.opacity = '1';
             }
         });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.warn("[Archotech] Steam Proxy fetch failed, falling back to manual scraping.", e);
+    }
 }
 
 const handleImageError = async (img, label) => {
+    // If we've already tried everything, show the clinical placeholder
+    if (img.dataset.triedAll) {
+        const container = img.closest('.preview-container'); 
+        if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
+        return;
+    }
+
     const steamId = img.getAttribute('data-steam-id');
-    if (steamId && steamId !== 'null' && !img.dataset.triedProxy) {
-        img.dataset.triedProxy = 'true';
+    if (steamId && steamId !== 'null') {
+        img.dataset.triedAll = 'true';
+        
+        // Strategy A: Construction (Fastest but probabilistic)
+        // Construction of direct Steam CDN URLs is unreliable due to hashed filenames.
+        
+        // Strategy B: Scrape (Slower but accurate)
         try {
             const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`);
-            const html = await res.text(); const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
-            if (match) { img.src = match[1]; return; }
+            if (res.ok) {
+                const html = await res.text(); 
+                const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
+                if (match) { 
+                    img.src = match[1]; 
+                    return; 
+                }
+            }
         } catch (e) { }
     }
-    const container = img.closest('.preview-container'); if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
+    
+    // Final Fallback: Clinical Placeholder
+    const container = img.closest('.preview-container'); 
+    if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
 };
 
 /* ── BOOTLOADER ────────────────────────────────────────────────────────────── */

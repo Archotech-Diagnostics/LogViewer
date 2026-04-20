@@ -711,11 +711,20 @@ function renderModTableBody(mods, tbodyId) {
         const label = isSteam ? (translations['KK_AD_Viewer_Steam'] || "STEAM") : (translations['KK_AD_Viewer_Local'] || "LOCAL");
         
         let previewHtml = "";
-        if (!window.archotechLocalData && !isSteam) {
-            previewHtml = `<div class="preview-container"><div class='no-preview'>LOCAL</div></div>`;
-        } else {
+        const isOnline = !window.archotechLocalData;
+        
+        if (isOnline) {
+            // Online Mode: LOCAL preview.png can't exist outside your PC. 
+            // We use a CSS-based placeholder that will be replaced by fetchSteamUpdates.
+            // Using a low-res data URI tiny pixel to prevent 404 console spam and browser stalls.
+            const initialSrc = mod.previewUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
-                <img src="Previews/${safePackageId}.png" class="mod-preview" data-steam-id="${mod.steamId}" data-preview-url="${mod.previewUrl || ''}" onerror="handleImageError(this, '${label}')" />
+                <img src="${initialSrc}" class="mod-preview" data-steam-id="${mod.steamId}" onerror="handleImageError(this, '${label}')" />
+            </div>`;
+        } else {
+            // Local Mode: Use the actual Preview.png we copied into the export folder.
+            previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
+                <img src="Previews/${safePackageId}.png" class="mod-preview" data-steam-id="${mod.steamId}" onerror="handleImageError(this, '${label}')" />
             </div>`;
         }
 
