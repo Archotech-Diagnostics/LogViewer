@@ -209,6 +209,18 @@ async function renderData() {
             const modsObj = typeof loadedData.mod_list === 'string' ? JSON.parse(loadedData.mod_list) : loadedData.mod_list;
             if (modsObj.activeMods) {
                 myModsCache = modsObj.activeMods;
+                
+                // Prioritize embedded static previews (Core, DLCs, etc.)
+                if (modsObj.staticPreviews) {
+                    const previews = modsObj.staticPreviews;
+                    myModsCache.forEach(m => {
+                        const lowId = m.packageId.toLowerCase();
+                        if (previews[lowId]) {
+                            m.previewUrl = previews[lowId];
+                        }
+                    });
+                }
+
                 await fetchSteamUpdates(myModsCache);
             }
         } catch(e) {}
