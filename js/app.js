@@ -585,10 +585,13 @@ async function fetchSteamUpdates(activeMods) {
                 const entry = steamData[mod.steamId];
                 if (typeof entry === 'object') {
                     if (entry.url) mod.previewUrl = entry.url;
-                    if (mod.localTime && entry.time) {
-                        mod.updateStatus = (entry.time > (mod.localTime + 86400)) ? 'outdated' : 'updated';
+                    const remoteTime = entry.time_updated || entry.time;
+                    if (mod.localTime && remoteTime) {
+                        mod.steamUpdateTime = remoteTime;
+                        mod.updateStatus = (remoteTime > (mod.localTime + 86400)) ? 'outdated' : 'updated';
                     }
                 } else if (mod.localTime) {
+                    mod.steamUpdateTime = entry;
                     mod.updateStatus = (entry > (mod.localTime + 86400)) ? 'outdated' : 'updated';
                 }
             }

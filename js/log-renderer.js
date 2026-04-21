@@ -202,7 +202,10 @@ async function renderData() {
     }
 
     process(loadedData.session_log,   'btn-session',  'session-log',  true, true);
-    process(loadedData.enhanced_log,  'btn-enhanced', 'enhanced-log', true, true);
+    if (loadedData.ai_diagnostic) {
+        renderEnhancedLog(loadedData.ai_diagnostic);
+        document.getElementById('btn-enhanced').classList.remove('hidden');
+    }
 
     if (loadedData.mod_list) {
         try {
@@ -283,9 +286,10 @@ function renderLoadTimeData(data) {
     try {
         const json = typeof data === 'string' ? JSON.parse(data) : data;
         const totalGameTime = json.TotalGameLoadTime || 0;
+        const totalModTimeSec = json.TotalModLoadTime || 0;
+        const coreEngineTime = json.TotalCoreEngineTime || 0;
+
         const impacts = json.Impacts || [];
-        const totalModTimeSec = impacts.reduce((sum, m) => sum + (m.TimeMs || 0), 0) / 1000;
-        const coreEngineTime = totalGameTime - totalModTimeSec;
 
         const trans = archotechTranslations;
 
@@ -322,28 +326,18 @@ function renderLoadTimeData(data) {
                         <span><span id="${countId}" data-full="${list.length}">${list.length}</span> ${trans['KK_AD_Viewer_ModsAffectingLoad'] || 'MODS AFFECTING LOAD TIME'}</span>
                      </div><div class="data-table-container">`;
             
-            list.forEach((mod, idx) => {
+            list.forEach((mod) => {
                 const isLudeon = (mod.PackageId || '').toLowerCase().startsWith('ludeon.');
                 const ludeonClass = isLudeon ? 'core-dlc-row' : '';
                 const timeSec = (mod.TimeMs || 0) / 1000;
 
-                const tScr = timeSec * 10;
-                const xScr = (mod.XmlCount || 0) * 0.03;
-                const aScr = (mod.AssetSizeMB || 0) * 0.5;
-                const cScr = (mod.TypeCount || 0) * 0.05;
-                const maxScr = Math.max(tScr, xScr, aScr, cScr);
-
-                let infoTip = trans['KK_AD_CheckModSizeTip'] || "Check mod size details.";
-                if (maxScr === tScr) infoTip = trans['KK_AD_WhyIsItHereSlowLoading'] || "Ranked due to slow file reading.";
-                else if (maxScr === xScr) infoTip = trans['KK_AD_WhyIsItHereLargeDatabase'] || "Ranked due to massive XML database additions.";
-                else if (maxScr === aScr) infoTip = trans['KK_AD_WhyIsItHereLargeMedia'] || "Ranked due to intensive texture/audio payload.";
-                else if (maxScr === cScr) infoTip = trans['KK_AD_WhyIsItHereComplexCode'] || "Ranked due to complex custom programming classes.";
-
+                // PHASE 4: Direct binding to C# parity fields
+                const infoTip = trans[mod.ReasonText] || "Check mod size details.";
                 const infoHtml = `<i class="info-icon" title="${infoTip.replace(/"/g, '&quot;')}">i</i>`;
 
                 h += `
                     <div class="compact-row ${ludeonClass}">
-                        <div class="col-rank"></div>
+                        <div class="col-rank">#${mod.ImpactRank || ''}</div>
                         <div class="col-modname ${isLudeon ? 'col-ludeon' : ''}">${mod.Name}</div>
                         <div class="col-info">${infoHtml}</div>
                         <div class="col-details">
@@ -436,69 +430,45 @@ function renderPerfScanData(data) {
         const records = json.Records || [];
         const trans = archotechTranslations;
 
-        // Safe hex→rgba helper
-        const hexToRgba = (hex, a) => {
-            if (!hex || hex[0] !== '#') return `rgba(128,128,128,${a})`;
-            const h = hex.length === 4 ? '#' + hex[1]+hex[1] + hex[2]+hex[2] + hex[3]+hex[3] : hex;
-            const r = parseInt(h.slice(1,3), 16);
-            const g = parseInt(h.slice(3,5), 16);
-            const b = parseInt(h.slice(5,7), 16);
-            if (isNaN(r) || isNaN(g) || isNaN(b)) return `rgba(128,128,128,${a})`;
-            return `rgba(${r},${g},${b},${a})`;
-        };
-
-        // -- Partition records mirroring DrawResults() exactly --
-        const SCORE_ORDER = { 'Critical': 4, 'Severe': 3, 'Elevated': 2, 'Nominal': 1 };
-
-        // 1. Targeted mods — always shown, regardless of Score or IsFramework
+        // -- Partition records mirroring DrawResults() --
+        // Trusting C# parity flags (IsTargeted, IsFramework)
         const targeted = records.filter(e => e.IsTargeted === true);
-
-        // 2. Active non-framework mods — Mirrors in-game strict noise filter.
-        //    Only show mods that have Elevated+ impact, a diagnosis tag, or reported errors.
         const activeMods = records
             .filter(e => !e.IsTargeted && !e.IsFramework && (e.Score !== 'Nominal' || (e.DiagnosisTags && e.DiagnosisTags.length > 0) || e.Errors > 0))
-            .sort((a, b) => (SCORE_ORDER[b.Score] || 1) - (SCORE_ORDER[a.Score] || 1));
+            .sort((a, b) => {
+                const order = { 'Critical': 4, 'Severe': 3, 'Elevated': 2, 'Nominal': 1 };
+                return (order[b.Score] || 1) - (order[a.Score] || 1);
+            });
 
-        // 3. Frameworks & Libraries — Mirrors in-game strict noise filter.
         const libraries = records.filter(e =>
             !e.IsTargeted && e.IsFramework && (e.Score !== 'Nominal' || (e.DiagnosisTags && e.DiagnosisTags.length > 0) || e.Errors > 0)
         );
 
-
-        // -- System Health Header (mirrors hasCritical / DrawResults) --
-        const hasCritical = records.some(e => !e.IsFramework && (e.ModName !== (trans['KK_AD_CoreEngineName'] || 'Core Engine (Vanilla / System)')) && (e.Score === 'Severe' || e.Score === 'Critical'));
-        const healthColor  = hasCritical ? '#ff4d4d' : '#44cc44';
-        const healthLabel  = hasCritical
+        // -- System Health Header (Trusting C# Root Flags) --
+        const isBottleneckActive = json.IsCriticalBottleneckActive;
+        const healthColor  = isBottleneckActive ? '#ff4d4d' : '#44cc44';
+        const healthLabel  = isBottleneckActive
             ? (trans['KK_AD_Header_CriticalBottleneck'] || '⚠ CRITICAL BOTTLENECK DETECTED')
             : (trans['KK_AD_Header_SystemStable']       || '✓ SYSTEM STABLE');
 
-        const totalOverheadMs  = activeMods.reduce((s, e) => s + (e.TotalMs || 0), 0);
-        const totalOverheadPct = (totalOverheadMs / (scanSec * 1000) * 100).toFixed(1);
+        const totalOverheadPct = json.TotalModOverhead || 0;
         const durMins = Math.floor(scanSec / 60);
         const durSecs = Math.floor(scanSec % 60);
         const durStr  = `${String(durMins).padStart(2,'0')}:${String(durSecs).padStart(2,'0')}`;
 
-        // -- System Health & Bloat Headers (mirrors DrawResults) --
+        // -- System Health & Bloat Headers --
         let bloatHtml = '';
-        
-        // Memory Hemorrhage detection
         if (json.GCPerSec && json.GCPerSec > 1.0) {
             bloatHtml += `<div style="font-size:14px; font-weight:bold; color:#ff4d4d; margin-top:4px;">${trans['KK_AD_MemoryHemorrhage'] || '⚠ MEMORY HEMORRHAGE DETECTED'}</div>`;
         }
-
-        // World Pawn Bloat
         if (json.WorldPawnCount && json.WorldPawnCount >= 1000) {
             const worldStr = trans['KK_AD_WorldPawnBloat'] ? trans['KK_AD_WorldPawnBloat'].replace('{0}', json.WorldPawnCount) : `WORLD PAWN BLOAT: Detected ${json.WorldPawnCount} world pawns.`;
             bloatHtml += `<div style="font-size:11px; color:#ffff00; margin-top:2px;">${worldStr}</div>`;
         }
-
-        // Active Map Bloat
         if (json.ActiveMapFilthCount && json.ActiveMapFilthCount >= 1000) {
             const bloatStr = trans['KK_AD_ActiveMapBloat'] ? trans['KK_AD_ActiveMapBloat'].replace('{0}', json.ActiveMapFilthCount) : `ACTIVE MAP BLOAT: Detected ${json.ActiveMapFilthCount} filth items.`;
             bloatHtml += `<div title="${trans['KK_AD_ActiveMapBloat'] || ''}" style="font-size:11px; color:#888; margin-top:2px; cursor:help;">${bloatStr}</div>`;
         }
-
-        // History/Tale Bloat
         if (json.TaleCount && json.TaleCount >= 300) {
             const taleStr = trans['KK_AD_TaleBloat'] ? trans['KK_AD_TaleBloat'].replace('{0}', json.TaleCount) : `TALE LOG BLOAT: Detected ${json.TaleCount} historical tales.`;
             bloatHtml += `<div style="font-size:11px; color:#ff9933; margin-top:2px;">${taleStr}</div>`;
@@ -525,9 +495,9 @@ function renderPerfScanData(data) {
         const renderCard = (entry, rank) => {
             const cpu = ((entry.TotalMs || 0) / (scanSec * 1000) * 100).toFixed(1);
 
-            // Score label + color — mirrors: score >= Severe → red, else white
-            const scoreLabel = trans[`KK_AD_Score_${entry.Score}`] || entry.Score || 'Nominal';
-            const scoreColor = (entry.Score === 'Severe' || entry.Score === 'Critical') ? '#ff4d4d' : '#ffffff';
+            // PHASE 4: Trusting C# final answers
+            const scoreLabel = trans[`KK_AD_Score_${entry.DisplayScore}`] || entry.DisplayScore || 'Nominal';
+            const scoreColor = entry.CalculatedColorHex || '#ffffff';
 
             // Row 2 — "Code Speed: Xms/tick | Real-Time Load: X% | Spike: Xms"
             // Color: gray, font: tiny — mirrors GUI.color = Color.gray
@@ -676,6 +646,58 @@ function renderPerfScanData(data) {
 }
 
 /**
+ * Renders the high-fidelity Enhanced Log tab using structured AI diagnostics.
+ * Mirrors Phase 2/3 pre-calculated parity fields.
+ */
+function renderEnhancedLog(data) {
+    const container = document.getElementById('enhanced-log');
+    if (!container) return;
+    try {
+        const json = typeof data === 'string' ? JSON.parse(data) : data;
+        const issues = json.issues || [];
+        const trans = archotechTranslations;
+
+        if (issues.length === 0) {
+            container.innerHTML = `<div class="empty-notice">No diagnostic issues identified in this session.</div>`;
+            return;
+        }
+
+        let html = `<div class="enhanced-log-container">`;
+        
+        issues.forEach((issue, idx) => {
+            const suspect = issue.resolvedSuspect || issue.suspect || 'Unknown';
+            const category = issue.resolvedCategory || issue.category || 'General';
+            const evidence = issue.resolvedEvidence || '';
+            const msg = issue.message || '';
+            const trace = issue.stackTrace || '';
+
+            html += `
+                <div class="log-block enhanced-log-entry" style="border-left: 4px solid #44cc44; margin-bottom: 15px; padding: 12px; background: #111;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #44cc44; font-weight: bold; font-size: 11px; text-transform: uppercase;">[+] ${category}</span>
+                        <span style="color: #888; font-size: 10px;">Issue #${idx + 1}</span>
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 6px;">${msg.split('\n')[0]}</div>
+                    <div style="margin-bottom: 10px; font-size: 12px; line-height: 1.5; color: #aaa;">
+                        <div style="margin-bottom: 4px;"><span style="color: #44cc44; font-weight: bold;">Suspected Source:</span> <span style="color: #fff;">${suspect}</span></div>
+                        <div><span style="color: #44cc44; font-weight: bold;">Evidence:</span> ${evidence}</div>
+                    </div>
+                    ${trace ? `
+                        <details style="margin-top: 8px; border-top: 1px solid #222; padding-top: 8px;">
+                            <summary style="font-size: 10px; color: #666; cursor: pointer; outline: none;">VIEW TECHNICAL STACK TRACE</summary>
+                            <div class="log-trace" style="font-size: 10px; margin-top: 8px; color: #555; white-space: pre-wrap; font-family: Consolas, monospace;">${trace}</div>
+                        </details>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (e) { console.error("Enhanced Log Render Error:", e); }
+}
+
+/**
  * Renders the AI Master Data tab.
  */
 function renderAIDiagnostic(data) {
@@ -741,13 +763,24 @@ function renderModTableBody(mods, tbodyId) {
         }
 
         let statusHtml = '';
+        let tooltipText = "Local / Unknown";
+        if (mod.localTime) {
+            const localDate = new Date(mod.localTime * 1000).toLocaleString();
+            tooltipText = `Local Update: ${localDate}`;
+            if (mod.steamUpdateTime) {
+                const steamDate = new Date(mod.steamUpdateTime * 1000).toLocaleString();
+                tooltipText += ` | Steam Update: ${steamDate}`;
+            }
+        }
+
         if (!isSteam) {
-            statusHtml = `<span style="font-size:10px; color:#5a5b49; font-weight:bold;">LOCAL</span>`;
+            statusHtml = `<span style="font-size:10px; color:#5a5b49; font-weight:bold;" title="${tooltipText}">LOCAL</span>`;
         } else {
             let sClass = 'status-unknown';
             if (mod.updateStatus === 'updated') sClass = 'status-up-to-date';
             else if (mod.updateStatus === 'outdated') sClass = 'status-outdated';
-            statusHtml = `<span class="status-dot ${sClass}"></span>`;
+            
+            statusHtml = `<span class="status-dot ${sClass}" title="${tooltipText}"></span>`;
         }
 
         let n = mod.steamId && mod.steamId !== "null" ? `<a href="https://steamcommunity.com/workshop/filedetails/?id=${mod.steamId}" target="_blank">${mod.name}</a>` : mod.name;

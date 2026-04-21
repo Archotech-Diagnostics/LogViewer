@@ -305,8 +305,8 @@ tr:hover { background: #111; }
 .col-rank::before { content: "#" counter(mod-rank); }
 .col-modname { flex: 1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .col-ludeon { color: #d9bf4c; }
-.col-info { width: 50px; display: flex; align-items: center; justify-content: center; }
-.col-details { width: 440px; text-align: right; color: #888; font-size: 11px; }
+.col-info { width: 30px; display: flex; align-items: center; justify-content: center; }
+.col-details { width: 500px; text-align: right; color: #888; font-size: 11px; white-space: nowrap; }
 .col-details span { cursor: help; }
 
 .col-score { width: 80px; text-align: right; font-weight: bold; }
