@@ -156,7 +156,7 @@ function applyFilter(targetId, filterType) {
     container.querySelectorAll('.log-block').forEach(block => {
         const btype = block.dataset.logtype;
         if (btype === 'meta' || filterType === 'all') { block.style.display = ''; return; }
-        const show = (filterType === 'error' ? (btype === 'error' || btype === 'deep-error') : btype === filterType);
+        const show = (btype === filterType);
         block.style.display = show ? '' : 'none';
     });
 }
@@ -586,11 +586,11 @@ async function fetchSteamUpdates(activeMods) {
                 if (typeof entry === 'object') {
                     if (entry.url) mod.previewUrl = entry.url;
                     const remoteTime = entry.time_updated || entry.time;
-                    if (mod.localTime && remoteTime) {
+                    if (mod.isWorkshop && mod.localTime && remoteTime) {
                         mod.steamUpdateTime = remoteTime;
                         mod.updateStatus = (remoteTime > (mod.localTime + 86400)) ? 'outdated' : 'updated';
                     }
-                } else if (mod.localTime) {
+                } else if (mod.isWorkshop && mod.localTime) {
                     mod.steamUpdateTime = entry;
                     mod.updateStatus = (entry > (mod.localTime + 86400)) ? 'outdated' : 'updated';
                 }
@@ -607,6 +607,7 @@ async function fetchSteamUpdates(activeMods) {
                 img.onload = () => img.style.opacity = '1';
             }
         });
+        setCompareFilter(currentCompareFilter);
     } catch (e) {
         console.warn("[Archotech] Steam Proxy fetch failed, falling back to manual scraping.", e);
     }

@@ -21,7 +21,11 @@ function getCategory(hex) {
     const r = parseInt(h.substring(1, 3), 16 || 0);
     const g = parseInt(h.substring(3, 5), 16 || 0);
     const b = parseInt(h.substring(5, 7), 16 || 0);
-    if (r > 210 && g < 100 && b < 100) return (g < 40 && b < 40) ? 'deep-error' : 'error';
+
+    // Strict separation: Deep Red (Exception) vs Soft Red (Error)
+    if (r > 200 && g < 50 && b < 50) return 'deep-error'; 
+    if (r > 200 && g < 100 && b < 100) return 'error'; 
+
     if (r > 210 && g > 190 && b < 100) return 'warning';
     if (r > 200 && g < 160 && b > 160) return 'harmony';
     if (r < 150 && g > 190 && b > 190) return 'custom';
@@ -722,7 +726,6 @@ function renderModTableBody(mods, tbodyId) {
             </div>`;
         }
 
-        let statusHtml = '';
         let tooltipText = "Local / Unknown";
         if (mod.localTime) {
             const localDate = new Date(mod.localTime * 1000).toLocaleString();
@@ -733,22 +736,28 @@ function renderModTableBody(mods, tbodyId) {
             }
         }
 
-        if (isSteam && mod.localTime && mod.steamUpdateTime) {
+        // 1. Establish Absolute Status
+        if (!isSteam) {
+            mod.updateStatus = 'unknown';
+        } else if (mod.localTime && mod.steamUpdateTime) {
             // 120-second (2 minute) grace period for Steam API / Local ACF desyncs
             if (mod.localTime < mod.steamUpdateTime - 120) {
                 mod.updateStatus = 'outdated';
             } else {
                 mod.updateStatus = 'updated';
             }
+        } else {
+            mod.updateStatus = 'unknown'; // Failsafe for un-polled Steam mods
         }
 
+        // 2. Generate UI Component
+        let statusHtml = '';
         if (!isSteam) {
             statusHtml = `<span style="font-size:10px; color:#5a5b49; font-weight:bold;" title="${tooltipText}">LOCAL</span>`;
         } else {
             let sClass = 'status-unknown';
             if (mod.updateStatus === 'updated') sClass = 'status-up-to-date';
             else if (mod.updateStatus === 'outdated') sClass = 'status-outdated';
-            
             statusHtml = `<span class="status-dot ${sClass}" title="${tooltipText}"></span>`;
         }
 
