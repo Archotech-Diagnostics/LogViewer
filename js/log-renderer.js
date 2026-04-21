@@ -202,10 +202,7 @@ async function renderData() {
     }
 
     process(loadedData.session_log,   'btn-session',  'session-log',  true, true);
-    if (loadedData.ai_diagnostic) {
-        renderEnhancedLog(loadedData.ai_diagnostic);
-        document.getElementById('btn-enhanced').classList.remove('hidden');
-    }
+    process(loadedData.enhanced_log,  'btn-enhanced', 'enhanced-log', true, true);
 
     if (loadedData.mod_list) {
         try {
@@ -290,7 +287,6 @@ function renderLoadTimeData(data) {
         const coreEngineTime = json.TotalCoreEngineTime || 0;
 
         const impacts = json.Impacts || [];
-
         const trans = archotechTranslations;
 
         const bootTip = (trans['KK_AD_TotalBootTimeTip'] || "The total real-world time from launching the game until the Main Menu appears.").replace(/"/g, '&quot;');
@@ -331,13 +327,30 @@ function renderLoadTimeData(data) {
                 const ludeonClass = isLudeon ? 'core-dlc-row' : '';
                 const timeSec = (mod.TimeMs || 0) / 1000;
 
-                // PHASE 4: Direct binding to C# parity fields
-                const infoTip = trans[mod.ReasonText] || "Check mod size details.";
+                // Failsafe: Use C# parity if available, fallback to JS backup math if missing
+                let infoTip = "Check mod size details.";
+                if (mod.ReasonText) {
+                    infoTip = trans[mod.ReasonText] || mod.ReasonText;
+                } else {
+                    const tScr = timeSec * 10;
+                    const xScr = (mod.XmlCount || 0) * 0.03;
+                    const aScr = (mod.AssetSizeMB || 0) * 0.5;
+                    const cScr = (mod.TypeCount || 0) * 0.05;
+                    const maxScr = Math.max(tScr, xScr, aScr, cScr);
+                    
+                    infoTip = trans['KK_AD_CheckModSizeTip'] || "Check mod size details.";
+                    if (maxScr === tScr) infoTip = trans['KK_AD_WhyIsItHereSlowLoading'] || "Ranked due to slow file reading.";
+                    else if (maxScr === xScr) infoTip = trans['KK_AD_WhyIsItHereLargeDatabase'] || "Ranked due to massive XML database additions.";
+                    else if (maxScr === aScr) infoTip = trans['KK_AD_WhyIsItHereLargeMedia'] || "Ranked due to intensive texture/audio payload.";
+                    else if (maxScr === cScr) infoTip = trans['KK_AD_WhyIsItHereComplexCode'] || "Ranked due to complex custom programming classes.";
+                }
+
                 const infoHtml = `<i class="info-icon" title="${infoTip.replace(/"/g, '&quot;')}">i</i>`;
+                const rankDisplay = mod.ImpactRank ? `#${mod.ImpactRank}` : '';
 
                 h += `
                     <div class="compact-row ${ludeonClass}">
-                        <div class="col-rank">#${mod.ImpactRank || ''}</div>
+                        <div class="col-rank">${rankDisplay}</div>
                         <div class="col-modname ${isLudeon ? 'col-ludeon' : ''}">${mod.Name}</div>
                         <div class="col-info">${infoHtml}</div>
                         <div class="col-details">
@@ -645,57 +658,7 @@ function renderPerfScanData(data) {
     }
 }
 
-/**
- * Renders the high-fidelity Enhanced Log tab using structured AI diagnostics.
- * Mirrors Phase 2/3 pre-calculated parity fields.
- */
-function renderEnhancedLog(data) {
-    const container = document.getElementById('enhanced-log');
-    if (!container) return;
-    try {
-        const json = typeof data === 'string' ? JSON.parse(data) : data;
-        const issues = json.issues || [];
-        const trans = archotechTranslations;
 
-        if (issues.length === 0) {
-            container.innerHTML = `<div class="empty-notice">No diagnostic issues identified in this session.</div>`;
-            return;
-        }
-
-        let html = `<div class="enhanced-log-container">`;
-        
-        issues.forEach((issue, idx) => {
-            const suspect = issue.resolvedSuspect || issue.suspect || 'Unknown';
-            const category = issue.resolvedCategory || issue.category || 'General';
-            const evidence = issue.resolvedEvidence || '';
-            const msg = issue.message || '';
-            const trace = issue.stackTrace || '';
-
-            html += `
-                <div class="log-block enhanced-log-entry" style="border-left: 4px solid #44cc44; margin-bottom: 15px; padding: 12px; background: #111;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #44cc44; font-weight: bold; font-size: 11px; text-transform: uppercase;">[+] ${category}</span>
-                        <span style="color: #888; font-size: 10px;">Issue #${idx + 1}</span>
-                    </div>
-                    <div style="font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 6px;">${msg.split('\n')[0]}</div>
-                    <div style="margin-bottom: 10px; font-size: 12px; line-height: 1.5; color: #aaa;">
-                        <div style="margin-bottom: 4px;"><span style="color: #44cc44; font-weight: bold;">Suspected Source:</span> <span style="color: #fff;">${suspect}</span></div>
-                        <div><span style="color: #44cc44; font-weight: bold;">Evidence:</span> ${evidence}</div>
-                    </div>
-                    ${trace ? `
-                        <details style="margin-top: 8px; border-top: 1px solid #222; padding-top: 8px;">
-                            <summary style="font-size: 10px; color: #666; cursor: pointer; outline: none;">VIEW TECHNICAL STACK TRACE</summary>
-                            <div class="log-trace" style="font-size: 10px; margin-top: 8px; color: #555; white-space: pre-wrap; font-family: Consolas, monospace;">${trace}</div>
-                        </details>
-                    ` : ''}
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-        container.innerHTML = html;
-    } catch (e) { console.error("Enhanced Log Render Error:", e); }
-}
 
 /**
  * Renders the AI Master Data tab.
@@ -770,6 +733,15 @@ function renderModTableBody(mods, tbodyId) {
             if (mod.steamUpdateTime) {
                 const steamDate = new Date(mod.steamUpdateTime * 1000).toLocaleString();
                 tooltipText += ` | Steam Update: ${steamDate}`;
+            }
+        }
+
+        if (isSteam && mod.localTime && mod.steamUpdateTime) {
+            // 60-second grace period for minor Steam API / Local ACF desyncs
+            if (mod.localTime < mod.steamUpdateTime - 60) {
+                mod.updateStatus = 'outdated';
+            } else {
+                mod.updateStatus = 'updated';
             }
         }
 
