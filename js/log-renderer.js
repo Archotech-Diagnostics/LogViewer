@@ -9,7 +9,8 @@
 function getCategory(hex) {
     if (!hex) return 'info';
     const h = hex.toLowerCase();
-    if (h === '#ff0000' || h === '#ff4d4d') return 'error';
+    if (h === '#ff0000') return 'deep-error';
+    if (h === '#ff4d4d') return 'error';
     if (h === '#ffff00') return 'warning';
     if (h === '#ffffff') return 'info';
     if (h === '#ff80cc') return 'harmony';
@@ -20,7 +21,7 @@ function getCategory(hex) {
     const r = parseInt(h.substring(1, 3), 16 || 0);
     const g = parseInt(h.substring(3, 5), 16 || 0);
     const b = parseInt(h.substring(5, 7), 16 || 0);
-    if (r > 210 && g < 100 && b < 100) return 'error';
+    if (r > 210 && g < 100 && b < 100) return (g < 40 && b < 40) ? 'deep-error' : 'error';
     if (r > 210 && g > 190 && b < 100) return 'warning';
     if (r > 200 && g < 160 && b > 160) return 'harmony';
     if (r < 150 && g > 190 && b > 190) return 'custom';
@@ -707,19 +708,15 @@ function renderModTableBody(mods, tbodyId) {
         const translations = archotechTranslations;
         const label = isSteam ? (translations['KK_AD_Viewer_Steam'] || "STEAM") : (translations['KK_AD_Viewer_Local'] || "LOCAL");
         
-        let previewHtml = "";
         const isOnline = !window.archotechLocalData;
+        let previewHtml = "";
         
         if (isOnline) {
-            // Online Mode: LOCAL preview.png can't exist outside your PC. 
-            // We use a CSS-based placeholder that will be replaced by fetchSteamUpdates.
-            // Using a low-res data URI tiny pixel to prevent 404 console spam and browser stalls.
             const initialSrc = mod.previewUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
                 <img src="${initialSrc}" class="mod-preview" data-steam-id="${mod.steamId}" onerror="handleImageError(this, '${label}')" />
             </div>`;
         } else {
-            // Local Mode: Use the actual Preview.png we copied into the export folder.
             previewHtml = `<div class="preview-container" data-steam-id="${mod.steamId}">
                 <img src="Previews/${safePackageId}.png" class="mod-preview" data-steam-id="${mod.steamId}" onerror="handleImageError(this, '${label}')" />
             </div>`;
@@ -737,8 +734,8 @@ function renderModTableBody(mods, tbodyId) {
         }
 
         if (isSteam && mod.localTime && mod.steamUpdateTime) {
-            // 60-second grace period for minor Steam API / Local ACF desyncs
-            if (mod.localTime < mod.steamUpdateTime - 60) {
+            // 120-second (2 minute) grace period for Steam API / Local ACF desyncs
+            if (mod.localTime < mod.steamUpdateTime - 120) {
                 mod.updateStatus = 'outdated';
             } else {
                 mod.updateStatus = 'updated';
