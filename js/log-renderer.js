@@ -530,9 +530,12 @@ function renderPerfScanData(data) {
                 : '';
 
             // Row 3 optional: Accomplices — red, mirrors "KK_AD_Accomplices"
-            const accompliceHtml = entry.AccompliceString
-                ? `<div style="font-size:9px; color:#ff4d4d; line-height:16px;">${trans['KK_AD_Accomplices'] ? trans['KK_AD_Accomplices'].replace('{0}', entry.AccompliceString) : `Accomplices: ${entry.AccompliceString}`}</div>`
-                : '';
+            let accomplicesHtml = '';
+            if (entry.AccompliceString) {
+                // Translate the text if the encyclopedia has it, or fallback to default
+                const accompliceLabel = trans['KK_AD_Accomplices'] ? trans['KK_AD_Accomplices'].replace('{0}', entry.AccompliceString) : `Other mods involved: ${entry.AccompliceString}`;
+                accomplicesHtml = `<div style="color: #ff4d4d; font-size: 11px; margin-top: 4px; font-weight: bold;">${accompliceLabel}</div>`;
+            }
 
             // Row 3.5 optional: Direct culprit — yellow, Top 10 or targeted only (TIER-18)
             let culpritHtml = '';
@@ -601,7 +604,7 @@ function renderPerfScanData(data) {
                     </div>
                     <div style="font-size:11px; color:#777; margin-bottom:2px; line-height:16px;">${row2}</div>
                     ${ramHtml}
-                    ${accompliceHtml}
+                    ${accomplicesHtml}
                     ${culpritHtml}
                     <div style="display:flex; flex-wrap:wrap; gap:0; margin-bottom:${devHtml ? '2px' : '0'}; margin-top:2px;">${tagsHtml}</div>
                     ${devHtml}
