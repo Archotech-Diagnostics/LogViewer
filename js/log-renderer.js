@@ -530,12 +530,16 @@ function renderPerfScanData(data) {
                 : '';
 
             // Row 3 optional: Accomplices — red, mirrors "KK_AD_Accomplices"
-            let accomplicesHtml = '';
-            if (entry.AccompliceString) {
-                // Translate the text if the encyclopedia has it, or fallback to default
-                const accompliceLabel = trans['KK_AD_Accomplices'] ? trans['KK_AD_Accomplices'].replace('{0}', entry.AccompliceString) : `Other mods involved: ${entry.AccompliceString}`;
-                accomplicesHtml = `<div style="color: #ff4d4d; font-size: 11px; margin-top: 4px; font-weight: bold;">${accompliceLabel}</div>`;
-            }
+            const accompliceTip = trans['KK_AD_AccomplicesTip'] || "Other mods actively patching this method. They may be contributing to the performance load.";
+            const accompliceHtml = entry.AccompliceString
+                ? `<div style="font-size:9px; color:#ff991a; line-height:16px;">
+                       <span class="archotech-tooltip" title="${accompliceTip.replace(/"/g, '&quot;')}" data-i18n-title="KK_AD_AccomplicesTip" style="cursor: help;">
+                           <span data-i18n="KK_AD_Accomplices">Other mods involved:</span> 
+                           <span style="border-bottom: 1px dotted #ff991a; margin-right: 4px;">${entry.AccompliceString}</span>
+                           <span style="opacity: 0.6; font-size: 0.9em; border-bottom: 1px dotted #ccc;">?</span>
+                       </span>
+                   </div>`
+                : '';
 
             // Row 3.5 optional: Direct culprit — yellow, Top 10 or targeted only (TIER-18)
             let culpritHtml = '';
@@ -604,7 +608,7 @@ function renderPerfScanData(data) {
                     </div>
                     <div style="font-size:11px; color:#777; margin-bottom:2px; line-height:16px;">${row2}</div>
                     ${ramHtml}
-                    ${accomplicesHtml}
+                    ${accompliceHtml}
                     ${culpritHtml}
                     <div style="display:flex; flex-wrap:wrap; gap:0; margin-bottom:${devHtml ? '2px' : '0'}; margin-top:2px;">${tagsHtml}</div>
                     ${devHtml}
