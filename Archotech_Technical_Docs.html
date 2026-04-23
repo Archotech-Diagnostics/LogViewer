@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archotech Diagnostics - Technical Documentation</title>
+    <style>
+        /* CORE STYLES - Matched to styles.css */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #000000; /* */
+            color: #6f7456; /* */
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        h1, h2 {
+            color: #c7cb00; /* Main accent */
+            border-bottom: 2px solid #5a5b49;
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        h3 {
+            color: #00e5ff; /* Secondary accent for sub-categories */
+            border-bottom: 1px solid #2e2e26;
+            padding-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-top: 30px;
+        }
+
+        a { color: #c7cb00; text-decoration: none; transition: 0.2s; }
+        a:hover { text-decoration: underline; color: #ffffff; }
+
+        /* HEADER - Matched to LogViewer Sticky Top */
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(0,0,0,0.97); /* */
+            border-bottom: 2px solid #2e2e26; /* */
+            backdrop-filter: blur(6px);
+            padding: 15px 40px;
+        }
+
+        .header-title {
+            margin: 0;
+            padding: 0;
+            border: none;
+            font-size: 1.8em;
+            color: #c7cb00;
+        }
+
+        .status-line {
+            font-size: 11px;
+            color: #5a5b49;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        /* CONTENT AREA */
+        .content-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 40px;
+        }
+
+        section {
+            margin-bottom: 50px;
+        }
+
+        .code-block {
+            background: #0a0a0a;
+            border: 1px solid #2e2e26; /* */
+            padding: 15px;
+            color: #ffffff;
+            font-family: 'Consolas', monospace;
+            border-radius: 2px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .note-box {
+            background: rgba(199, 203, 0, 0.05); /* Tint of accent color */
+            border-left: 4px solid #c7cb00;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        p { margin-bottom: 20px; }
+
+        /* Simple helper for adding more text easily */
+        .tech-entry {
+            border-top: 1px solid #2e2e26;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sticky-top">
+        <h1 class="header-title">Archotech Diagnostics</h1>
+        <div class="status-line">Neural Interface: Connected // Technical Documentation Alpha 1.6</div>
+    </div>
+
+    <div class="content-container">
+        
+        <section id="architecture">
+            <h2>Overview: The Diagnostic Engine Architecture</h2>
+            <p>Archotech Diagnostics operates as a low-level instrumentation framework designed to resolve the "Black Box" nature of RimWorld's modded environment. The engine is built on a foundation of **Dynamic Binary Instrumentation (DBI)**, utilizing the Harmony library to perform runtime bytecode manipulation. Our architecture prioritizes execution speed by adhering to a **Zero-Allocation hot-path**, utilizing <code>Span&lt;T&gt;</code> and <code>stackalloc</code> for string parsing and metadata extraction to bypass the Managed Heap whenever possible.</p>
+            <div class="note-box">
+                <strong>Engine Hooking Strategy:</strong> We utilize **Method Redirection (Detouring)** on critical Unity engine paths. By hijacking <code>Application.logMessageReceived</code> and <code>Log.Message</code>, we create a non-blocking diagnostic stream that intercepts data before it reaches the game's internal <code>Log.messages</code> buffer.
+            </div>
+        </section>
+
+        <section id="deep-scan">
+            <h2>1. Deep Scan (ModMapper & Heuristics)</h2>
+            <p>ModMapper is a highly-optimized file system crawler that operates independently of the game's standard <code>ModContentPack</code> initialization. It is designed to identify "Invisible Performance Debt"—unoptimized assets that consume system resources without ever appearing in a traditional code-based profiler.</p>
+            
+            <div class="tech-entry">
+                <h3>VRAM & Memory Estimation Logic</h3>
+                <p>The scanner doesn't just list files; it performs a **Heuristic Memory Projection**. For every <code>.png</code> or <code>.dds</code> detected in <code>/Textures</code>, the engine calculates the estimated <code>Texture2D</code> footprint using the following C# logic:</p>
+                <div class="code-block">
+                    // Heuristic Memory Calculation
+                    long totalBytes = width * height * (hasAlpha ? 4 : 3);
+                    if (supportsMipMaps) totalBytes = (long)(totalBytes * 1.33f); // Accounting for MipMap overhead
+                    if (textureCompression == DXT1) totalBytes /= 8;
+                </div>
+                <p>By comparing file sizes on disk with projected memory usage, ModMapper can identify "VRAM Bombs"—textures that are small on disk due to PNG compression but expand to hundreds of megabytes in GPU memory because they lack proper DXTC/BC7 metadata.</p>
+            </div>
+
+            <div class="tech-entry">
+                <h3>Threaded I/O & Recursive Indexing</h3>
+                <p>The indexing engine utilizes <code>System.Threading.Tasks.Parallel.ForEach</code> with a custom <code>MaxDegreeOfParallelism</code> tuned to the user's CPU core count. It performs a recursive walk of the <code>RootDir</code>, identifying symbolic links and junctions that can often cause infinite loops or duplicate scanning in less robust tools. For assemblies, it uses <code>System.Reflection.AssemblyName.GetAssemblyName()</code> to extract metadata without fully loading the DLL into the <code>AppDomain</code>, preventing "Ghost Assembly" conflicts.</p>
+            </div>
+        </section>
+
+        <section id="enhanced-log">
+            <h2>2. Debug Log - Info View (Enhanced Analysis)</h2>
+            <p>The Enhanced Debug Log is the mod's primary diagnostic interface. It works by intercepting the <code>UnityEngine.Application.logMessageReceived</code> event and augmenting the incoming data with Archotech-specific metadata.</p>
+            
+            <div class="tech-entry">
+                <h3>Recursive Stack Walker & Assembly Mapping</h3>
+                <p>When an error occurs, the <strong>Suspect Analyzer</strong> performs a reverse-order walk of the <code>StackTrace</code>. For every frame, it extracts the <code>MethodBase</code> and utilizes an internal cache (<code>Dictionary&lt;Assembly, ModContentPack&gt;</code>) to resolve the method's origin. This is significantly faster than standard reflection-based lookups. </p>
+                <ul>
+                    <li><strong>Harmony Detection:</strong> If a method has been patched, we utilize <code>Harmony.GetPatchInfo(method)</code> to retrieve the <code>Prefixes</code>, <code>Postfixes</code>, and <code>Transpilers</code>. We then iterate through the owner IDs of these patches to identify "Accomplices"—mods that are potentially modifying the method's behavior even if they didn't throw the initial exception.</li>
+                    <li><strong>IL Offset Correlation:</strong> For advanced debugging, we capture the IL offset of the instruction that failed, allowing modders to correlate the crash with specific lines in their source code via the LogViewer's detailed view.</li>
+                </ul>
+            </div>
+
+            <div class="tech-entry">
+                <h3>DS Trace & Log Suppression Hashing</h3>
+                <p>The spam filtering system utilizes a <strong>High-Performance MurmurHash3</strong> algorithm. Every incoming log message is converted into a 128-bit hash. Identical hashes are stored in a <code>ConcurrentDictionary&lt;Guid, LogEntry&gt;</code>. When a repeat is detected, we simply increment the <code>OccurrenceCount</code> on the existing entry. This prevents the "Log Buffer Overflow" that typically causes frame-rate drops when a mod enters an infinite error loop (e.g., a <code>JobDriver</code> failing every tick).</p>
+            </div>
+        </section>
+
+        <section id="load-time">
+            <h2>3. Load Time Diagnostics (Startup Instrumentation)</h2>
+            <p>Load Time Diagnostics is the most complex component of the mod, requiring surgical **Harmony Transpilation** of the game's core loading methods in <code>Verse.ModContentPack</code> and <code>Verse.DirectXmlLoader</code>.</p>
+            
+            <div class="tech-entry">
+                <h3>XML Hydration Profiling</h3>
+                <p>Traditional profilers can only tell you that the game is "Loading Defs." Our system transpilers inject <code>Stopwatch</code> start/stop calls directly into the <code>DirectXmlLoader.LoadXmlData&lt;T&gt;</code> loop. This allows us to measure the "Hydration Time" for every individual <code>XmlNode</code> as it is converted into a C# <code>Def</code> object. This is critical for identifying mods with massive, poorly-indexed XML files that cause the "Processing..." hang during startup.</p>
+            </div>
+
+            <div class="tech-entry">
+                <h3>Static Constructor (C#) Tracking</h3>
+                <p>The system patches <code>Verse.StaticConstructorOnStartupUtility.CallAll</code>, wrapping the call to <code>RuntimeHelpers.RunClassConstructor</code> for every class marked with the <code>[StaticConstructorOnStartup]</code> attribute. We track the execution time of these constructors, which is where many mods perform heavy tasks like <code>GraphicDatabase</code> population or complex <code>DefDatabase</code> searches that delay the Main Menu appearance.</p>
+            </div>
+        </section>
+
+        <section id="performance-scan">
+            <h2>4. Performance Scan (Real-Time Profiling)</h2>
+            <p>Performance Scan operates at the simulation level, monitoring the health of the <code>TickManager</code> and the Unity <code>MainLoop</code>.</p>
+            
+            <div class="tech-entry">
+                <h3>Tick-Rate Variance & Simulation Spikes</h3>
+                <p>We monitor the execution time of <code>Verse.TickManager.DoSingleTick</code>. By comparing the <code>Stopwatch</code> delta against the expected tick-rate (e.g., 16.6ms for 1x speed), we can identify "Simulation Choke." When a choke is detected, the engine dynamically samples the most active modded methods in the <code>Pawn_JobTracker</code> and <code>Pawn_PathFollower</code> classes, which are the most common sources of TPS drops in late-game colonies.</p>
+            </div>
+
+            <div class="tech-entry">
+                <h3>Unity MainThread Monitoring</h3>
+                <p>To detect UI and rendering stutters, we hook into the <code>UnityEngine.MonoBehaviour.Update</code> and <code>OnGUI</code> cycles. We track the <strong>Frame-Time Standard Deviation</strong>; if the variance exceeds a specific threshold (micro-stuttering), we capture a snapshot of the current <code>EventStack</code>. This allows us to identify if the stutter was caused by a mod's <code>Draw</code> call or a heavy <code>Harmony</code> postfix on a rendering method.</p>
+            </div>
+        </section>
+
+        <section id="export">
+            <h2>5. General Export & Infrastructure</h2>
+            <p>The export system is a high-speed serialization pipeline designed to package the entire diagnostic state into a compressed JSON payload.</p>
+            
+            <div class="tech-entry">
+                <h3>Polymorphic Serialization & Compression</h3>
+                <p>We utilize a custom <code>JSON</code> serialization engine that handles the game's complex, often circular, object graphs. The data includes full stack traces, mod versioning, and hardware entropy. Before transmission, the payload is compressed using <code>System.IO.Compression.GZipStream</code> to minimize bandwidth and ensure fast uploads even on slow connections.</p>
+            </div>
+
+            <div class="tech-entry">
+                <h3>Cloud Layer: Gists & Workers</h3>
+                <p>The infrastructure is entirely serverless, ensuring maximum stability and zero maintenance. 
+                <ul>
+                    <li><strong>GitHub Gist Backend:</strong> Reports are stored as anonymous Gists. This provides a globally distributed, high-availability storage solution with built-in versioning.</li>
+                    <li><strong>Cloudflare Worker Layer:</strong> A serverless middleware layer acts as the "Traffic Controller." It handles report routing, provides a custom URL-shortening service for easy sharing, and enforces **Rate-Limiting** to prevent abuse of the export system.</li>
+                    <li><strong>LogViewer Hydration:</strong> The web-based LogViewer is a static Single-Page Application (SPA). It "hydrates" the Gist data on the client side, performing the final rendering of the mod list and logs entirely in the user's browser, ensuring that sensitive diagnostic data is only ever processed locally.</li>
+                </ul>
+                </p>
+            </div>
+        </section>
+
+
+
+    </div>
+
+</body>
+</html>
