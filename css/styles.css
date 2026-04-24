@@ -296,13 +296,13 @@ tr:hover { background: #111; }
 .load-summary-label { color: #888; font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
 .load-summary-value { font-size: 1.6em; color: #ffd700; font-weight: bold; }
 
-.data-table-container { width: 100%; border-collapse: collapse; margin-top: 5px; counter-reset: mod-rank; }
-.compact-row { display: flex; align-items: center; padding: 0 8px; border-bottom: 1px solid #222; font-size: 11px; height: 40px; line-height: 40px; counter-increment: mod-rank; }
+.data-table-container { width: 100%; border-collapse: collapse; margin-top: 5px; }
+.compact-row { display: flex; align-items: center; padding: 0 8px; border-bottom: 1px solid #222; font-size: 11px; height: 40px; line-height: 40px; }
 .compact-row:hover { background-color: rgba(255, 255, 255, 0.08); }
 .hide-core .core-dlc-row { display: none !important; }
 
 .col-rank { width: 40px; color: #888; font-weight: bold; font-size: 14px; }
-.col-rank::before { content: "#" counter(mod-rank); }
+
 .col-modname { flex: 1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .col-ludeon { color: #d9bf4c; }
 .col-info { width: 30px; display: flex; align-items: center; justify-content: center; }

@@ -327,7 +327,8 @@ function renderLoadTimeData(data) {
                         <span><span id="${countId}" data-full="${list.length}">${list.length}</span> ${trans['KK_AD_Viewer_ModsAffectingLoad'] || 'MODS AFFECTING LOAD TIME'}</span>
                      </div><div class="data-table-container">`;
             
-            list.forEach((mod) => {
+            // FIX: Add 'index' to the loop so we can force a single, clean rank number
+            list.forEach((mod, index) => {
                 const isLudeon = (mod.PackageId || '').toLowerCase().startsWith('ludeon.');
                 const ludeonClass = isLudeon ? 'core-dlc-row' : '';
                 const timeSec = (mod.TimeMs || 0) / 1000;
@@ -351,7 +352,9 @@ function renderLoadTimeData(data) {
                 }
 
                 const infoHtml = `<i class="info-icon" title="${infoTip.replace(/"/g, '&quot;')}">i</i>`;
-                const rankDisplay = mod.ImpactRank ? `#${mod.ImpactRank}` : '';
+                
+                // POINT 3 FIX: Force a clean rank display using the array index instead of potentially duplicated JSON data
+                const rankDisplay = `#${index + 1}`;
 
                 h += `
                     <div class="compact-row ${ludeonClass}">
@@ -359,10 +362,10 @@ function renderLoadTimeData(data) {
                         <div class="col-modname ${isLudeon ? 'col-ludeon' : ''}">${mod.Name}</div>
                         <div class="col-info">${infoHtml}</div>
                         <div class="col-details">
-                            <span title="${mTip}">Measured Time: ${timeSec.toFixed(2)}s</span> | 
-                            <span title="${xTip}">XML: ${mod.XmlCount || 0}</span> | 
                             <span title="${aTip}">Assets: ${mod.AssetCount || 0} (${(mod.AssetSizeMB || 0).toFixed(1)} MB)</span> | 
-                            <span title="${tTip}">C# Types: ${mod.TypeCount || 0}</span>
+                            <span title="${xTip}">XML: ${mod.XmlCount || 0}</span> | 
+                            <span title="${tTip}">C# Types: ${mod.TypeCount || 0}</span> | 
+                            <span title="${mTip}">C# Code Execution: ${timeSec.toFixed(2)}s</span>
                         </div>
                     </div>
                 `;
