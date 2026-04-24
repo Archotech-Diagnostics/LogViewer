@@ -358,7 +358,7 @@ function renderLoadTimeData(data) {
 
                 h += `
                     <div class="compact-row ${ludeonClass}">
-                        <div class="col-rank">${rankDisplay}</div>
+                        <div class="col-rank"></div>
                         <div class="col-modname ${isLudeon ? 'col-ludeon' : ''}">${mod.Name}</div>
                         <div class="col-info">${infoHtml}</div>
                         <div class="col-details">
