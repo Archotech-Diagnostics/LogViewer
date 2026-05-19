@@ -13,12 +13,8 @@
 
 /* Enhanced Log Specifics */
 .enhanced-log-entry {
-    border-top: 1px solid #2e2e26;
-    padding: 6px 0;
-    margin-top: 2px; 
-}
-.enhanced-log-entry:first-of-type {
-    border-top: none;
+    padding: 0;
+    margin-top: 0; 
 }
 
 /* Supplemental Log Blocks */

@@ -441,3 +441,15 @@ tr:hover { background: #111; }
     display: flex;
     justify-content: space-between;
 }
+
+.log-toggle { 
+    cursor: pointer; 
+    font-weight: bold; 
+    margin-right: 8px; 
+    color: #888888; /* Technical Gray */
+    user-select: none; 
+    display: inline-block;
+}
+.hidden-by-collapse { 
+    display: none !important; 
+}

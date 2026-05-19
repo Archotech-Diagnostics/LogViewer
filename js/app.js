@@ -9,8 +9,8 @@
 /**
  * Static encyclopedia dictionary loaded from Encyclopedia.json.
  * Maps short IDs (e.g. "Expl_NullRef") to full translation key strings
- * (e.g. "KK_AD_IssueExpl_NullRef") which are then resolved via archotechTranslations.
- * Also maps raw KK_AD_ keys directly to their English text for Enhanced Log rendering.
+ * (e.g. "KK_AL_IssueExpl_NullRef") which are then resolved via archotechTranslations.
+ * Also maps raw KK_AL_ keys directly to their English text for Enhanced Log rendering.
  */
 let archotechEncyclopedia = {};
 
@@ -22,7 +22,7 @@ let archotechEncyclopedia = {};
 async function loadEncyclopedia() {
     const paths = [
         './Encyclopedia.json',
-        'https://archotech-diagnostics.github.io/LogViewer/Encyclopedia.json'
+        'https://Archotech-Logs.github.io/LogViewer/Encyclopedia.json'
     ];
     for (const p of paths) {
         try {
@@ -46,12 +46,10 @@ let loadedData = {
     ai_diagnostic: null,
     enhanced_log: null,
     session_log: null,
-    trace_report: null,
+
     mod_list: null,
     player_log: null,
-    color_legend: null,
-    load_time_data: null,
-    perf_scan_data: null
+    color_legend: null
 };
 
 let myModsCache = [];
@@ -86,15 +84,12 @@ function switchTab(targetId) {
 
     const translations = archotechTranslations;
     const descs = {
-        'session-log': translations['KK_AD_Viewer_DescSessionLog'] || `<b>Raw Game Log:</b> A complete, sequentially accurate dump of every message sent to the game console during your current play session.<br/><br/><b>Use Case:</b> Perfect for seeing exactly when an error occurred in relation to other events. It contains the raw stack traces used by developers to pinpoint failing lines of code.`,
-        'enhanced-log': translations['KK_AD_Viewer_DescEnhancedLog'] || `<b>Enhanced Game Log:</b> A user-friendly version of the game log designed for non-modders. It includes helpful notes and comments that explain exactly what each error means.<br/><br/><b>Use Case:</b> This is your primary troubleshooting tool. Look for the 'What happened' and 'Suspect' sections to find quick solutions.`,
-        'ai-json': translations['KK_AD_Viewer_DescAIDiagnostics'] || `<b>AI Diagnostics:</b> A structured data package optimized for analysis by machine intelligence (Gemini, ChatGPT, Claude).<br/><br/><b>Use Case:</b> Export this file to let an AI solve complex mod conflicts or performance issues for you.`,
-        'trace-report': translations['KK_AD_Viewer_DescTraceReport'] || `<b>DS Trace Report:</b> A collection of unidentified background processes captured by the Deep Scan engine.<br/><br/><b>Use Case:</b> Used by advanced troubleshooters to create new "fingerprints" for unidentified mods.`,
-        'player-log': translations['KK_AD_Viewer_DescUnityLog'] || `<b>Unity Engine Log:</b> The system-level "Player.log" containing hardware and engine initialization telemetry.<br/><br/><b>Use Case:</b> Essential for identifying driver crashes or errors that happen before the game main menu loads.`,
-        'mod-list': translations['KK_AD_Viewer_DescModList'] || `<b>Archotech Mod List:</b> A clinical manifest of all active biological supplements, including specific versions and IDs.<br/><br/><b>Use Case:</b> Verify load order and check for outdated versions using the integrated Steam Workshop sync.`,
-        'load-time': translations['KK_AD_Viewer_DescLoadTime'] || `<b>Load Time Diagnostics:</b> This tab ranks the mods that impact your startup time the most, based on multiple performance factors detailed below for each mod.<br/><br/><b>Use Case:</b> Identify which mods are responsible for excessive startup times.`,
-        'perf-scan': translations['KK_AD_Viewer_DescPerfScan'] || `<b>Performance Scan Log:</b> Real-time execution metrics captured during a live profiling of the game's simulation loop.<br/><br/><b>Use Case:</b> Pinpoint exactly which modded methods are stealing your TPS and causing late-game lag.`
+        'session-log': translations['KK_AL_Viewer_DescSessionLog'] || `<b>Raw Game Log:</b> A complete, chronological timeline of every message logged during your game session.<br/><br/><b>Use Case:</b> Best for tracing the exact sequence of events leading up to an issue or crash in its raw, unfiltered state.`,
+        'enhanced-log': translations['KK_AL_Viewer_DescEnhancedLog'] || `<b>Enhanced Game Log:</b> Your primary troubleshooting dashboard. It scans the raw log, extracts identified mod signatures, and translates cryptic errors into helpful guidance.<br/><br/><b>Use Case:</b> Quickly identify which mod is the primary suspect behind a warning or critical exception.`,
+        'ai-json': translations['KK_AL_Viewer_DescAIDiagnostics'] || `<b>AI Diagnostics:</b> A structured diagnostic report optimized for AI analysis to help understand warnings and errors.<br/><br/><b>Use Case:</b> Save to file, and give the .json to an AI/LLM (like Gemini or ChatGPT) for help understanding and tracking warnings and errors.`,
 
+        'player-log': translations['KK_AL_Viewer_DescUnityLog'] || `<b>Unity Engine Log:</b> A low-level log recorded directly by the Unity game engine.<br/><br/><b>Use Case:</b> Essential for diagnosing black screens, hardware/driver failures, or crashes that occur before the main menu even loads.`,
+        'mod-list': translations['KK_AL_Viewer_DescModList'] || `<b>Archotech Mod List:</b> An interactive clinical manifest of your active mods, complete with load order, authors, and Steam Workshop sync.<br/><br/><b>Use Case:</b> Audit your mod list health, find outdated supplements, and easily compare setups using Compare Mode.`
     };
 
     const descEl = document.getElementById('tab-description');
@@ -153,11 +148,22 @@ function applyFilter(targetId, filterType) {
     if (!targetId || (targetId !== 'session-log' && targetId !== 'enhanced-log')) return;
     const container = document.getElementById(targetId);
     if (!container) return;
-    container.querySelectorAll('.log-block').forEach(block => {
-        const btype = block.dataset.logtype;
-        if (btype === 'meta' || filterType === 'all') { block.style.display = ''; return; }
-        const show = (btype === filterType);
-        block.style.display = show ? '' : 'none';
+
+    Array.from(container.children).forEach(groupEl => {
+        if (!groupEl.classList.contains('enhanced-log-group')) return;
+
+        const btype = groupEl.dataset.logtype || 'info';
+        let isVisible = true;
+
+        if (filterType === 'exception' || filterType === 'deep-error') {
+            isVisible = (btype === 'exception' || btype === 'deep-error');
+        } else if (filterType === 'error') {
+            isVisible = (btype === 'error' || btype === 'deep-error' || btype === 'exception');
+        } else {
+            isVisible = (filterType === 'all' || btype === filterType);
+        }
+
+        groupEl.style.display = isVisible ? '' : 'none';
     });
 }
 
@@ -179,12 +185,12 @@ function saveActiveContent() {
 
     const blob = new Blob([exportData.content], { type: exportData.mimeType });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); 
-    a.href = url; 
+    const a = document.createElement('a');
+    a.href = url;
     a.download = exportData.filename;
-    document.body.appendChild(a); 
-    a.click(); 
-    document.body.removeChild(a); 
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
@@ -263,22 +269,14 @@ function getActiveContentForExport() {
         // never in the DOM in their raw form, hence innerText was missing them.
         const header =
             `ARCHOTECH ENHANCED GAME LOG\n${"=".repeat(60)}\n` +
-            `Archotech Diagnostics — Enhanced Log Export\n` +
-            `Color codes stripped. [+] = diagnostic note  [!] = suggested action\n` +
+            `Archotech Logs — Enhanced Log Export\n` +
+            `Color codes stripped. [+] = diagnostic note  [!] = spam counter\n` +
             `${"=".repeat(60)}\n\n`;
         content = header + formatEnhancedLog(loadedData.enhanced_log);
         filename = "ARCHOTECH_ENHANCED_LOG.txt";
     }
 
-    else if (currentActiveTarget === 'trace-report') {
-        // DS Trace Report — raw source only, no DOM scraping
-        const header =
-            `ARCHOTECH DS TRACE REPORT\n${"=".repeat(60)}\n` +
-            `Deep Scan unidentified trace capture.\n` +
-            `${"=".repeat(60)}\n\n`;
-        content = header + formatEnhancedLog(loadedData.trace_report);
-        filename = "ARCHOTECH_DS_TRACE_REPORT.txt";
-    }
+
 
     else if (currentActiveTarget === 'player-log') {
         // Unity Engine Log — already stored as plain text (no colour codes)
@@ -294,128 +292,27 @@ function getActiveContentForExport() {
         mimeType = "application/json";
     }
 
-    else if (currentActiveTarget === 'perf-scan' && loadedData.perf_scan_data) {
-        const json = typeof loadedData.perf_scan_data === 'string'
-            ? JSON.parse(loadedData.perf_scan_data)
-            : loadedData.perf_scan_data;
 
-        const scanSec = json.TotalRuntime || 1;
-        const SEP = "-".repeat(60);
-
-        content  = `ARCHOTECH PERFORMANCE SCAN REPORT\n${"=".repeat(60)}\n`;
-        content += `Total Scan Duration : ${json.TotalRuntime.toFixed(1)} s\n`;
-        content += `Total Records       : ${json.Records.length}\n`;
-
-        // Global health warnings
-        if (json.GCPerSec > 1.0)
-            content += `\n⚠  MEMORY HEMORRHAGE — GC pressure: ${json.GCPerSec.toFixed(2)} collections/sec\n`;
-        if (json.WorldPawnCount >= 1500)
-            content += `\n⚠  WORLD PAWN BLOAT — ${json.WorldPawnCount} background world pawns tracked.\n`;
-        if (json.ActiveMapFilthCount > 2000)
-            content += `\n⚠  ACTIVE MAP BLOAT — ${json.ActiveMapFilthCount} filth items on current map.\n`;
-        if (json.TaleCount > 500)
-            content += `\n⚠  HISTORY BLOAT — ${json.TaleCount} art/social tales in memory.\n`;
-
-        content += `\n${"=".repeat(60)}\n\n`;
-
-        json.Records.forEach(r => {
-            const cpu = (scanSec > 0)
-                ? ((r.TotalMs || 0) / (scanSec * 1000) * 100).toFixed(1)
-                : "0.0";
-
-            content += `${SEP}\n`;
-            content += `[${(r.Score || 'NOMINAL').toUpperCase().padEnd(8)}]  ${r.ModName}\n`;
-            content += `${SEP}\n`;
-            content += `  Code Speed          : ${(r.MsPerTick || 0).toFixed(3)} ms/tick\n`;
-            content += `  Real-Time CPU Load  : ${cpu}%\n`;
-            content += `  Highest Spike       : ${(r.SpikeMs || 0).toFixed(2)} ms\n`;
-
-            if (r.RamKbSec > 1.0)
-                content += `  Memory Allocation   : ${r.RamKbSec.toFixed(0)} KB/sec\n`;
-
-            if (r.DiagnosisTags && r.DiagnosisTags.length > 0) {
-                const tags = r.DiagnosisTags.map(tk => trans[`KK_AD_${tk}`] || tk).join(", ");
-                content += `  Diagnoses           : ${tags}\n`;
-            } else {
-                content += `  Diagnoses           : No active bottlenecks detected.\n`;
-            }
-
-            if (r.AccompliceString)
-                content += `  Accomplices         : ${r.AccompliceString}\n`;
-            if (r.ActiveCulprit)
-                content += `  Primary Culprit     : ${r.ActiveCulprit}${r.DefName ? ` (${r.DefName})` : ''}\n`;
-
-            if (r.HasDevData) {
-                content += `  ── Developer Readout ─────────────────────────\n`;
-                content += `  Assets              : ${(r.DevSizeMB || 0).toFixed(1)} MB\n`;
-                content += `  XML Defs            : ${r.DevDefCount || 0}\n`;
-                content += `  Harmony Patches     : ${r.DevPatchCount || 0}\n`;
-                if ((r.DevVRAMMB || 0) > 0)
-                    content += `  GPU VRAM Load       : ${r.DevVRAMMB.toFixed(1)} MB\n`;
-            }
-
-            if (r.TopMethods && r.TopMethods.length > 0) {
-                content += `  ── Method Trace ──────────────────────────────\n`;
-                r.TopMethods.forEach(m => {
-                    const ram = m.AllocKb > 0 ? `  [${m.AllocKb.toFixed(1)} KB alloc]` : '';
-                    content += `    »  ${m.Type}.${m.Method}: ${m.TimeMs.toFixed(2)} ms${ram}\n`;
-                });
-            }
-
-            content += '\n';
-        });
-
-        filename = "ARCHOTECH_PERFORMANCE_REPORT.txt";
-    }
-
-    else if (currentActiveTarget === 'load-time' && loadedData.load_time_data) {
-        const json = typeof loadedData.load_time_data === 'string'
-            ? JSON.parse(loadedData.load_time_data)
-            : loadedData.load_time_data;
-
-        const totalSec = json.TotalGameLoadTime || 0;
-        const impacts  = json.Impacts || [];
-        const modSec   = impacts.reduce((s, m) => s + (m.TimeMs || 0), 0) / 1000;
-
-        content  = `ARCHOTECH LOAD TIME DIAGNOSTICS\n${"=".repeat(60)}\n`;
-        content += `Total Boot Duration  : ${totalSec.toFixed(2)} s\n`;
-        content += `Mod Processing Time  : ${modSec.toFixed(2)} s\n`;
-        content += `Core Engine Time     : ${Math.max(0, totalSec - modSec).toFixed(2)} s (estimated)\n`;
-        content += `${"=".repeat(60)}\n\n`;
-
-        impacts.forEach((m, i) => {
-            const isLudeon = (m.PackageId || '').toLowerCase().startsWith('ludeon.');
-            content += `${"-".repeat(60)}\n`;
-            content += `#${(i + 1).toString().padStart(3)}  ${m.Name}${isLudeon ? '  [Core/DLC]' : ''}\n`;
-            content += `${"-".repeat(60)}\n`;
-            content += `  Measured Load Time : ${((m.TimeMs || 0) / 1000).toFixed(2)} s\n`;
-            content += `  Asset Files        : ${m.AssetCount || 0} (${(m.AssetSizeMB || 0).toFixed(1)} MB)\n`;
-            content += `  XML Definitions    : ${m.XmlCount || 0}\n`;
-            content += `  C# Type Injection  : ${m.TypeCount || 0}\n\n`;
-        });
-
-        filename = "ARCHOTECH_LOAD_REPORT.txt";
-    }
 
     else if (currentActiveTarget === 'mod-list' && myModsCache.length > 0) {
-        content  = `ARCHOTECH MOD LIST MANIFEST\n${"=".repeat(80)}\n`;
+        content = `ARCHOTECH MOD LIST MANIFEST\n${"=".repeat(80)}\n`;
         content += `Total Mods Installed : ${myModsCache.length}\n`;
         content += `Scan Date           : ${new Date().toLocaleString()}\n`;
         content += `${"=".repeat(80)}\n\n`;
-        
+
         // Write each mod as its own block so version strings never get truncated.
         // A fixed-column ASCII table cuts off long version lists (e.g. "1.3, 1.4, 1.5, 1.6"),
         // so we use a labelled multi-line record layout instead.
         content += `${"─".repeat(100)}\n`;
 
         myModsCache.forEach((m, i) => {
-            const num    = (i + 1).toString().padStart(3);
+            const num = (i + 1).toString().padStart(3);
             const status = m.updateStatus === 'outdated' ? 'Needs Update'
-                         : m.updateStatus === 'updated'  ? 'Up to Date'
-                         : 'Local';
+                : m.updateStatus === 'updated' ? 'Up to Date'
+                    : 'Local';
             // Use the full versions string — never truncate
-            const ver    = m.versions || m.version || 'Unknown';
-            const id     = m.packageId || 'unknown.id';
+            const ver = m.versions || m.version || 'Unknown';
+            const id = m.packageId || 'unknown.id';
             const author = m.authors || 'Unknown';
 
             content += `#${num}  ${m.name || 'Unknown Mod'}\n`;
@@ -446,42 +343,7 @@ function toggleHelp(event) {
 
 // Mirrors PerformanceScannerInfoWindow diagnosis legend exactly.
 // Called once after translations are loaded.
-function buildDiagnosisLegend() {
-    const container = document.getElementById('diagnosis-legend-container');
-    if (!container || typeof PERF_TAG_COLORS === 'undefined') return;
 
-    const trans = archotechTranslations;
-
-    // All diagnosis tag keys with their label/tip localization pairs
-    const tags = [
-        { key: 'CognitiveOverload',    label: 'KK_AD_CognitiveOverload',    tip: 'KK_AD_CognitiveOverloadTip' },
-        { key: 'BiologicalBloat',      label: 'KK_AD_BiologicalBloat',      tip: 'KK_AD_BiologicalBloatTip' },
-        { key: 'EntityChoke',          label: 'KK_AD_EntityChoke',           tip: 'KK_AD_EntityChokeTip' },
-        { key: 'VisualHemorrhage',     label: 'KK_AD_VisualHemorrhage',      tip: 'KK_AD_VisualHemorrhageTip' },
-        { key: 'DiagnosticHemorrhage', label: 'KK_AD_DiagnosticHemorrhage',  tip: 'KK_AD_DiagnosticHemorrhageTip' },
-        { key: 'FrameworkBurden',      label: 'KK_AD_FrameworkBurden',       tip: 'KK_AD_FrameworkBurdenTip' },
-        { key: 'VanillaLimits',        label: 'KK_AD_VanillaLimits',         tip: 'KK_AD_VanillaLimitsTip' },
-        { key: 'HyperactiveLoop',      label: 'KK_AD_HyperactiveLoop',       tip: 'KK_AD_HyperactiveLoopTip' },
-        { key: 'ParasiticLoad',        label: 'KK_AD_ParasiticLoad',         tip: 'KK_AD_ParasiticLoadTip' },
-        { key: 'ModConflict',          label: 'KK_AD_ModConflict',           tip: 'KK_AD_ModConflictTip' },
-    ];
-
-    container.innerHTML = tags.map(t => {
-        const color   = PERF_TAG_COLORS[t.key] || '#ffffff';
-        const label   = trans[t.label] || t.key;
-        const tipText = trans[t.tip]   || '';
-        const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
-        const bg = `rgba(${r},${g},${b},0.20)`;
-        return `
-            <div style="margin-bottom:12px;">
-                <div style="display:inline-flex; align-items:center; justify-content:center;
-                             width:120px; height:20px; border:1px solid ${color}; background:${bg};
-                             color:${color}; font-size:10px; font-weight:bold; text-transform:uppercase;
-                             letter-spacing:0.3px; margin-bottom:4px;">${label}</div>
-                <div style="font-size:11px; color:#999; line-height:1.4; padding-left:2px;">${tipText}</div>
-            </div>`;
-    }).join('');
-}
 
 document.addEventListener('click', e => {
     const panel = document.getElementById('help-panel');
@@ -616,7 +478,7 @@ async function fetchSteamUpdates(activeMods) {
 const handleImageError = async (img, label) => {
     // If we've already tried everything, show the clinical placeholder
     if (img.dataset.triedAll) {
-        const container = img.closest('.preview-container'); 
+        const container = img.closest('.preview-container');
         if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
         return;
     }
@@ -624,26 +486,26 @@ const handleImageError = async (img, label) => {
     const steamId = img.getAttribute('data-steam-id');
     if (steamId && steamId !== 'null') {
         img.dataset.triedAll = 'true';
-        
+
         // Strategy A: Construction (Fastest but probabilistic)
         // Construction of direct Steam CDN URLs is unreliable due to hashed filenames.
-        
+
         // Strategy B: Scrape (Slower but accurate)
         try {
             const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://steamcommunity.com/sharedfiles/filedetails/?id=' + steamId)}`);
             if (res.ok) {
-                const html = await res.text(); 
+                const html = await res.text();
                 const match = html.match(/id="previewImageMain"[^>]+src="([^"]+)"/);
-                if (match) { 
-                    img.src = match[1]; 
-                    return; 
+                if (match) {
+                    img.src = match[1];
+                    return;
                 }
             }
         } catch (e) { }
     }
-    
+
     // Final Fallback: Clinical Placeholder
-    const container = img.closest('.preview-container'); 
+    const container = img.closest('.preview-container');
     if (container) container.innerHTML = `<div class='no-preview'>${label}</div>`;
 };
 
@@ -668,7 +530,7 @@ function stitchParts(files) {
         const m = filename.match(/^(.+?)_part(\d+)(\.[^.]+)?$/);
         if (m) {
             const base = m[1] + (m[3] || '');
-            const idx  = parseInt(m[2], 10);
+            const idx = parseInt(m[2], 10);
             if (!partMap[base]) partMap[base] = {};
             partMap[base][idx] = content;
         } else {
@@ -723,9 +585,9 @@ function decodeAndDecompress(str) {
  * any string value that is a known encyclopedia key with its full text.
  *
  * Resolution order:
- *   1. archotechEncyclopedia[value] → the mapped key string (e.g. "KK_AD_IssueExpl_NullRef")
+ *   1. archotechEncyclopedia[value] → the mapped key string (e.g. "KK_AL_IssueExpl_NullRef")
  *   2. archotechTranslations[mappedKey] → the human-readable translated string
- *   3. If only step 1 succeeds → return the KK_AD_ key (translations may arrive later)
+ *   3. If only step 1 succeeds → return the KK_AL_ key (translations may arrive later)
  *   4. No match → return original value unchanged.
  *
  * @param   {*} data  Any JSON-parsed value.
@@ -737,7 +599,7 @@ function applyEncyclopedia(data) {
     if (typeof data === 'string') {
         const mapped = archotechEncyclopedia[data];
         if (!mapped) return data;
-        // mapped is a KK_AD_ key — resolve it through translations if possible
+        // mapped is a KK_AL_ key — resolve it through translations if possible
         return archotechTranslations[mapped] || mapped;
     }
 
@@ -791,20 +653,18 @@ async function init() {
                 // ── Phase 2: Decompress each file (GZip+Base64 → plain text) ──
                 const decompress = (key) => decodeAndDecompress(stitched[key] ?? '');
 
-                loadedData.ai_diagnostic  = decompress("AI_DIAGNOSTICS.json");
-                loadedData.enhanced_log   = decompress("ENHANCED_RAW_LOG.txt");
-                loadedData.session_log    = decompress("SESSION_LOG_DUMP.txt");
-                loadedData.trace_report   = decompress("UNKNOWN_TRACE_REPORT.txt");
-                loadedData.mod_list       = decompress("MOD_LIST.json");
-                loadedData.player_log     = decompress("Player.log") || null;
-                loadedData.load_time_data = decompress("LOAD_TIME_DATA.json");
-                loadedData.perf_scan_data = decompress("PERF_SCAN_DATA.json");
-                loadedData.color_legend   = decompress("COLOR_LEGEND_HTML.txt");
+                loadedData.ai_diagnostic = decompress("AI_DIAGNOSTICS.json");
+                loadedData.enhanced_log = decompress("ENHANCED_RAW_LOG.txt");
+                loadedData.session_log = decompress("SESSION_LOG_DUMP.txt");
+
+                loadedData.mod_list = decompress("MOD_LIST.json");
+                loadedData.player_log = decompress("Player.log") || null;
+                loadedData.color_legend = decompress("COLOR_LEGEND_HTML.txt");
 
                 // ── Phase 3: Load translations (also compressed) ──────────────
                 const i18nRaw = decompress("I18N_DICT.json");
                 if (i18nRaw) {
-                    try { archotechTranslations = JSON.parse(i18nRaw); } catch (_) {}
+                    try { archotechTranslations = JSON.parse(i18nRaw); } catch (_) { }
                 }
 
                 // ── Phase 4: Apply Encyclopedia mapping to structured JSON data ─
@@ -816,18 +676,7 @@ async function init() {
                         loadedData.ai_diagnostic = JSON.stringify(applyEncyclopedia(parsed), null, 2);
                     } catch (_) { /* not valid JSON, leave as-is */ }
                 }
-                if (loadedData.perf_scan_data) {
-                    try {
-                        const parsed = JSON.parse(loadedData.perf_scan_data);
-                        loadedData.perf_scan_data = applyEncyclopedia(parsed);
-                    } catch (_) { /* leave as-is */ }
-                }
-                if (loadedData.load_time_data) {
-                    try {
-                        const parsed = JSON.parse(loadedData.load_time_data);
-                        loadedData.load_time_data = applyEncyclopedia(parsed);
-                    } catch (_) { /* leave as-is */ }
-                }
+
             }
 
             // Extract the exact creation time directly from the GitHub Gist metadata
@@ -837,10 +686,9 @@ async function init() {
             }
 
             statusText.innerText = `Online Diagnostic Record - ${exportTime}`;
-            
+
             document.getElementById('online-notice').classList.remove('hidden');
             await renderData();
-            buildDiagnosisLegend();
         } catch (e) { statusText.innerText = "Linkage Error"; console.error('[Archotech] init error:', e); }
     } else if (window.archotechLocalData) {
         // Extract the timestamp injected directly by ExportManager.cs
@@ -852,23 +700,97 @@ async function init() {
         statusText.innerText = `Local Diagnostic Record - ${exportTime}`;
         // Local data.js payloads are NOT compressed (written directly by C# to disk).
         // Apply encyclopedia mapping to structured JSON for consistency.
-        const keys = { "AI_DIAGNOSTICS.json": "ai_diagnostic", "ENHANCED_RAW_LOG.txt": "enhanced_log", "SESSION_LOG_DUMP.txt": "session_log", "UNKNOWN_TRACE_REPORT.txt": "trace_report", "MOD_LIST.json": "mod_list", "Player.log": "player_log", "LOAD_TIME_DATA.json": "load_time_data", "PERF_SCAN_DATA.json": "perf_scan_data", "COLOR_LEGEND_HTML.txt": "color_legend" };
+        const keys = { "AI_DIAGNOSTICS.json": "ai_diagnostic", "ENHANCED_RAW_LOG.txt": "enhanced_log", "SESSION_LOG_DUMP.txt": "session_log", "MOD_LIST.json": "mod_list", "Player.log": "player_log", "COLOR_LEGEND_HTML.txt": "color_legend" };
         Object.entries(keys).forEach(([f, k]) => { loadedData[k] = window.archotechLocalData[f]; });
 
-        // Apply encyclopedia to local structured data too
-        for (const key of ['perf_scan_data', 'load_time_data']) {
-            if (loadedData[key] && typeof loadedData[key] === 'string') {
-                try { loadedData[key] = applyEncyclopedia(JSON.parse(loadedData[key])); } catch (_) {}
-            } else if (loadedData[key] && typeof loadedData[key] === 'object') {
-                loadedData[key] = applyEncyclopedia(loadedData[key]);
-            }
-        }
-
         await renderData();
-        buildDiagnosisLegend();
     }
 
     if (urlCompareId) { document.getElementById('compare-url').value = urlCompareId; toggleCompareMode(); fetchCompareData(); }
+}
+
+function injectCollapseToggles(targetId) {
+    const container = document.getElementById(targetId);
+    if (!container) return;
+
+    // Remove existing to avoid duplicates if re-rendered
+    container.querySelectorAll('.log-toggle').forEach(el => el.remove());
+
+    Array.from(container.children).forEach(groupEl => {
+        if (groupEl.classList.contains('enhanced-log-group')) {
+            // Skip the welcome/introduction block at the top of the log
+            if (groupEl.dataset.isIntro === 'true') return;
+
+            // The first child block of the group is the header block
+            const firstBlock = groupEl.firstElementChild;
+            if (!firstBlock) return;
+
+            // Find the actual first line of the log message within this firstBlock
+            const firstLogLineDiv = Array.from(firstBlock.children).find(el => el.tagName === 'DIV' && el.textContent.trim() !== '');
+            if (!firstLogLineDiv) return;
+
+            const toggle = document.createElement('span');
+            toggle.className = 'log-toggle';
+            toggle.textContent = '[-]';
+            toggle.onclick = (e) => {
+                e.stopPropagation();
+                toggleGroup(groupEl, toggle);
+            };
+
+            // Trim leading whitespace
+            if (firstLogLineDiv.firstChild && firstLogLineDiv.firstChild.nodeType === Node.TEXT_NODE) {
+                firstLogLineDiv.firstChild.textContent = firstLogLineDiv.firstChild.textContent.replace(/^\s+/, '');
+            }
+
+            firstLogLineDiv.insertBefore(toggle, firstLogLineDiv.firstChild);
+        }
+    });
+}
+
+function toggleGroup(groupEl, toggleElement, forceCollapse = null) {
+    const isCollapsing = forceCollapse !== null ? forceCollapse : toggleElement.textContent === '[-]';
+    toggleElement.textContent = isCollapsing ? '[+]' : '[-]';
+
+    const blocks = Array.from(groupEl.children);
+    if (blocks.length > 0) {
+        const firstBlock = blocks[0];
+
+        // 1. Collapse/expand all other blocks inside the group (What is this, Potential source, actual message, divider, etc.)
+        for (let i = 1; i < blocks.length; i++) {
+            const block = blocks[i];
+            if (isCollapsing) {
+                block.classList.add('hidden-by-collapse');
+            } else {
+                block.classList.remove('hidden-by-collapse');
+            }
+        }
+
+        // 2. Also collapse/expand subsequent lines within the first block (e.g. stack trace lines)
+        const firstBlockChildren = Array.from(firstBlock.children);
+        if (firstBlockChildren.length > 1) {
+            for (let i = 1; i < firstBlockChildren.length; i++) {
+                const child = firstBlockChildren[i];
+                if (isCollapsing) {
+                    child.classList.add('hidden-by-collapse');
+                } else {
+                    child.classList.remove('hidden-by-collapse');
+                }
+            }
+        }
+    }
+}
+
+function setGlobalToggle(collapse) {
+    if (!currentActiveTarget || (currentActiveTarget !== 'session-log' && currentActiveTarget !== 'enhanced-log')) return;
+    const container = document.getElementById(currentActiveTarget);
+    if (!container) return;
+
+    container.querySelectorAll('.log-toggle').forEach(toggle => {
+        const groupEl = toggle.closest('.enhanced-log-group');
+        if (groupEl) {
+            toggleGroup(groupEl, toggle, collapse);
+        }
+    });
 }
 
 window.addEventListener('DOMContentLoaded', init);

@@ -10,35 +10,33 @@
 </head>
 <body>
     <div id="loading-splash">
-        <div class="loading-text" data-i18n="KK_AD_Viewer_Loading">LogViewer Loading...</div>
+        <div class="loading-text" data-i18n="KK_AL_Viewer_Loading">LogViewer Loading...</div>
     </div>
 
     <!-- Compact sticky top: title + status + tabs + notices — all stay visible on scroll -->
     <div class="sticky-top">
         <div class="header">
-            <h1 data-i18n="KK_AD_Viewer_SystemTitle">Archotech Diagnostic System</h1>
+            <h1 data-i18n="KK_AL_Viewer_SystemTitle">Archotech Log System</h1>
             <div style="display:flex; align-items:center; gap:10px; margin-top: 4px;">
                 <span id="status-text" class="status-badge">Synchronizing Neural Interface...</span>
-                <span id="online-notice" class="online-notice hidden" data-i18n="KK_AD_Viewer_ShareableLink">&#127279; Shareable Link — copy the URL to share this diagnostic record</span>
+                <span id="online-notice" class="online-notice hidden" data-i18n="KK_AL_Viewer_ShareableLink">&#127279; Shareable Link — copy the URL to share this diagnostic record</span>
                 <span style="color: #48433d;">|</span>
-                <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3710696168" target="_blank" class="steam-link" style="margin-top:0;" data-i18n="KK_AD_Viewer_SteamWorkshop">Archotech Diagnostics - Steam Workshop</a>
+                <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3710696168" target="_blank" class="steam-link" style="margin-top:0;" data-i18n="KK_AL_Viewer_SteamWorkshop">Archotech Logs - Steam Workshop</a>
             </div>
         </div>
         <div class="tabs" id="tabs-container">
             <!-- Buttons will be shown dynamically -->
-            <button class="tab hidden" data-target="session-log" id="btn-session" data-i18n="KK_AD_Viewer_RawLogTab">Raw Game Log</button>
-            <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced" data-i18n="KK_AD_Viewer_EnhancedLogTab">Enhanced Game Log</button>
-            <button class="tab hidden" data-target="player-log" id="btn-player" data-i18n="KK_AD_Viewer_UnityLogTab">Unity Engine Log</button>
-            <button class="tab hidden" data-target="load-time" id="btn-load-time" data-i18n="KK_AD_Viewer_LoadTimeTab">Load Time Log</button>
-            <button class="tab hidden" data-target="perf-scan" id="btn-perf-scan" data-i18n="KK_AD_Viewer_PerfScanTab">Performance Scan Log</button>
-            <button class="tab hidden" data-target="ai-json" id="btn-ai" data-i18n="KK_AD_Viewer_AIDiagnosticsTab">AI Diagnostics</button>
-            <button class="tab hidden" data-target="trace-report" id="btn-trace" data-i18n="KK_AD_Viewer_DSTraceTab">DS Trace Report</button>
-            <button class="tab hidden" data-target="mod-list" id="btn-mods" data-i18n="KK_AD_Viewer_ModListTab">Archotech Mod List</button>
+            <button class="tab hidden" data-target="session-log" id="btn-session" data-i18n="KK_AL_Viewer_RawLogTab">Raw Game Log</button>
+            <button class="tab hidden" data-target="enhanced-log" id="btn-enhanced" data-i18n="KK_AL_Viewer_EnhancedLogTab">Enhanced Game Log</button>
+            <button class="tab hidden" data-target="player-log" id="btn-player" data-i18n="KK_AL_Viewer_UnityLogTab">Unity Engine Log</button>
+
+            <button class="tab hidden" data-target="ai-json" id="btn-ai" data-i18n="KK_AL_Viewer_AIDiagnosticsTab">AI Diagnostics</button>
+
+            <button class="tab hidden" data-target="mod-list" id="btn-mods" data-i18n="KK_AL_Viewer_ModListTab">Archotech Mod List</button>
         </div>
         <div class="description-container">
             <button id="help-btn" class="side-btn" onclick="toggleHelp(event)">
-                <div data-i18n="KK_AD_Viewer_ColorLabel">COLOR</div>
-                <div data-i18n="KK_AD_Viewer_InfoLabel">INFO</div>
+                <div data-i18n="KK_AL_Viewer_InfoLabel">Log Guide</div>
             </button>
             <div id="tab-description" class="description-box">
                 <b>Archotech LogViewer</b><br/>
@@ -46,87 +44,84 @@
             </div>
             <div class="side-btn-group">
                 <button id="save-btn" class="side-btn" onclick="saveActiveContent()">
-                    <div data-i18n="KK_AD_Viewer_SaveTo">SAVE TO</div>
-                    <div data-i18n="KK_AD_Viewer_File">FILE</div>
+                    <div data-i18n="KK_AL_Viewer_SaveTo">SAVE TO</div>
+                    <div data-i18n="KK_AL_Viewer_File">FILE</div>
                 </button>
                 <button id="global-copy-btn" class="side-btn" onclick="copyActiveContent()">
-                    <div data-i18n="KK_AD_Viewer_CopyTo">COPY TO</div>
-                    <div data-i18n="KK_AD_Viewer_Clipboard">CLIPBOARD</div>
+                    <div data-i18n="KK_AL_Viewer_CopyTo">COPY TO</div>
+                    <div data-i18n="KK_AL_Viewer_Clipboard">CLIPBOARD</div>
                 </button>
             </div>
         </div>
 
         <!-- Log type filter bar — only shown on Raw/Enhanced log tabs -->
         <div id="filter-bar" class="filter-bar hidden">
-            <span class="filter-label" data-i18n="KK_AD_Viewer_FilterLabel">Filter:</span>
+            <button id="btn-expand-all" class="filter-btn global-toggle" onclick="setGlobalToggle(false)">Expand All</button>
+            <button id="btn-collapse-all" class="filter-btn global-toggle" onclick="setGlobalToggle(true)" style="margin-right: 20px;">Collapse All</button>
+            <span class="filter-label" data-i18n="KK_AL_Viewer_FilterLabel">Filter:</span>
             <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">
-                <span class="filter-dot" style="color:#6f7456">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterAll">ALL</span>
+                <span class="filter-dot" style="color:#6f7456">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterAll">ALL</span>
             </button>
             <button class="filter-btn" data-filter="error" onclick="setFilter('error')">
-                <span class="filter-dot" style="color:#ff4d4d">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterErrors">ERRORS</span>
+                <span class="filter-dot" style="color:#ff4d4d">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterErrors">ERRORS</span>
             </button>
             <button class="filter-btn" data-filter="deep-error" onclick="setFilter('deep-error')">
-                <span class="filter-dot" style="color:#ff0000">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterExceptions">EXCEPTIONS</span>
+                <span class="filter-dot" style="color:#ff0000">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterExceptions">EXCEPTIONS</span>
             </button>
             <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">
-                <span class="filter-dot" style="color:#ffff00">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterWarnings">WARNINGS</span>
+                <span class="filter-dot" style="color:#ffff00">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterWarnings">WARNINGS</span>
             </button>
             <button class="filter-btn" data-filter="info" onclick="setFilter('info')">
-                <span class="filter-dot" style="color:#ffffff">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterInfo">INFO</span>
+                <span class="filter-dot" style="color:#ffffff">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterInfo">INFO</span>
             </button>
-            <button class="filter-btn" data-filter="harmony" onclick="setFilter('harmony')">
-                <span class="filter-dot" style="color:#ff80cc">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterHarmony">HARMONY</span>
-            </button>
-            <button class="filter-btn" data-filter="conflict" onclick="setFilter('conflict')">
-                <span class="filter-dot" style="color:#ff991a">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterConflicts">CONFLICTS</span>
-            </button>
+
             <button class="filter-btn" data-filter="custom" onclick="setFilter('custom')">
-                <span class="filter-dot" style="color:#66e5ff">&#9679;</span> <span data-i18n="KK_AD_Viewer_FilterArchotech">ARCHOTECH</span>
+                <span class="filter-dot" style="color:#66e5ff">&#9679;</span> <span data-i18n="KK_AL_Viewer_FilterArchotech">ARCHOTECH</span>
             </button>
         </div>
 
         <div id="player-log-warning" class="warning-box" style="margin-top: 5px;">
-            <strong data-i18n="KK_AD_Viewer_SecurityNote">&#9888; SECURITY NOTE:</strong> <span data-i18n="KK_AD_Viewer_UnityLogWarning">The Unity Engine Log (Player.log) may contain sensitive paths such as your Windows username. It is <strong>never</strong> uploaded automatically. Only share with trusted developers if specifically requested.</span>
+            <strong data-i18n="KK_AL_Viewer_SecurityNote">&#9888; SECURITY NOTE:</strong> <span data-i18n="KK_AL_Viewer_UnityLogWarning">The Unity Engine Log (Player.log) may contain sensitive paths such as your Windows username. It is <strong>never</strong> uploaded automatically. Only share with trusted developers if specifically requested.</span>
         </div>
 
         <!-- Mod List Global Controls — only shown on Mod List tab -->
         <div id="mod-filter-bar" class="mod-filter-bar hidden">
             <div id="mod-list-controls" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; width: 100%;">
                 <div style="display: flex; gap: 5px;">
-                    <button id="toggle-compare-btn" class="side-btn" onclick="toggleCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px;" data-i18n="KK_AD_Viewer_CompareMode">COMPARE MODE</button>
-                    <button id="close-compare-btn" class="side-btn hidden" onclick="closeCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #6f7456; color: #c7cb00;" data-i18n="KK_AD_Viewer_CloseCompare">CLOSE COMPARE</button>
-                    <button id="share-compare-btn" class="side-btn hidden" onclick="shareComparison()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #1a1a1a; color: #c7cb00;" data-i18n="KK_AD_Viewer_ShareComparison">SHARE COMPARISON</button>
+                    <button id="toggle-compare-btn" class="side-btn" onclick="toggleCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px;" data-i18n="KK_AL_Viewer_CompareMode">COMPARE MODE</button>
+                    <button id="close-compare-btn" class="side-btn hidden" onclick="closeCompareMode()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #6f7456; color: #c7cb00;" data-i18n="KK_AL_Viewer_CloseCompare">CLOSE COMPARE</button>
+                    <button id="share-compare-btn" class="side-btn hidden" onclick="shareComparison()" style="flex-direction: row; min-width: auto; padding: 6px 12px; background-color: #1a1a1a; color: #c7cb00;" data-i18n="KK_AL_Viewer_ShareComparison">SHARE COMPARISON</button>
                 </div>
                 
                 <div id="compare-actions" class="hidden" style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" id="compare-url" placeholder="Paste another LogViewer link here..." style="background: #111; color: #fff; border: 1px solid #5a5b49; padding: 6px; width: 280px; font-family: monospace; font-size: 11px;" data-i18n="KK_AD_Viewer_ComparePlaceholder">
-                    <button class="side-btn" onclick="fetchCompareData()" style="flex-direction: row; min-width: auto; padding: 6px 12px;" data-i18n="KK_AD_Viewer_Load">LOAD</button>
+                    <input type="text" id="compare-url" placeholder="Paste another LogViewer link here..." style="background: #111; color: #fff; border: 1px solid #5a5b49; padding: 6px; width: 280px; font-family: monospace; font-size: 11px;" data-i18n="KK_AL_Viewer_ComparePlaceholder">
+                    <button class="side-btn" onclick="fetchCompareData()" style="flex-direction: row; min-width: auto; padding: 6px 12px;" data-i18n="KK_AL_Viewer_Load">LOAD</button>
                 </div>
                 
                 <div id="compare-filters" class="hidden" style="display: flex; gap: 8px; align-items: center; border-left: 1px solid #2e2e26; padding-left: 8px;">
-                    <button id="filter-all-mods" class="filter-btn active" onclick="setCompareFilter('all')" data-i18n="KK_AD_Viewer_FilterAll">ALL</button>
-                    <button id="filter-shared-mods" class="filter-btn" onclick="setCompareFilter('shared')" data-i18n="KK_AD_Viewer_Shared">SHARED</button>
-                    <button id="filter-unique-left" class="filter-btn" onclick="setCompareFilter('left')" data-i18n="KK_AD_Viewer_UniqueYou">UNIQUE (You)</button>
-                    <button id="filter-unique-right" class="filter-btn" onclick="setCompareFilter('right')" data-i18n="KK_AD_Viewer_UniqueThem">UNIQUE (Them)</button>
+                    <button id="filter-all-mods" class="filter-btn active" onclick="setCompareFilter('all')" data-i18n="KK_AL_Viewer_FilterAll">ALL</button>
+                    <button id="filter-shared-mods" class="filter-btn" onclick="setCompareFilter('shared')" data-i18n="KK_AL_Viewer_Shared">SHARED</button>
+                    <button id="filter-unique-left" class="filter-btn" onclick="setCompareFilter('left')" data-i18n="KK_AL_Viewer_UniqueYou">UNIQUE (You)</button>
+                    <button id="filter-unique-right" class="filter-btn" onclick="setCompareFilter('right')" data-i18n="KK_AL_Viewer_UniqueThem">UNIQUE (Them)</button>
                 </div>
                 
                 <div id="update-filters" style="display: flex; gap: 5px; border-left: 1px solid #2e2e26; padding-left: 8px;">
-                    <span class="filter-label" data-i18n="KK_AD_Viewer_UpdateStatus">Update Status:</span>
-                    <button class="filter-btn active" data-upfilter="all" onclick="setUpdateFilter('all')" data-i18n="KK_AD_Viewer_FilterAll">ALL</button>
-                    <button class="filter-btn" data-upfilter="outdated" onclick="setUpdateFilter('outdated')" data-i18n="KK_AD_Viewer_NeedsUpdate">NEEDS UPDATE</button>
-                    <button class="filter-btn" data-upfilter="updated" onclick="setUpdateFilter('updated')" data-i18n="KK_AD_Viewer_UpToDate">UP TO DATE</button>
-                    <button class="filter-btn" data-upfilter="unknown" onclick="setUpdateFilter('unknown')" data-i18n="KK_AD_Viewer_Unknown">UNKNOWN</button>
+                    <span class="filter-label" data-i18n="KK_AL_Viewer_UpdateStatus">Update Status:</span>
+                    <button class="filter-btn active" data-upfilter="all" onclick="setUpdateFilter('all')" data-i18n="KK_AL_Viewer_FilterAll">ALL</button>
+                    <button class="filter-btn" data-upfilter="outdated" onclick="setUpdateFilter('outdated')" data-i18n="KK_AL_Viewer_NeedsUpdate">NEEDS UPDATE</button>
+                    <button class="filter-btn" data-upfilter="updated" onclick="setUpdateFilter('updated')" data-i18n="KK_AL_Viewer_UpToDate">UP TO DATE</button>
+                    <button class="filter-btn" data-upfilter="unknown" onclick="setUpdateFilter('unknown')" data-i18n="KK_AL_Viewer_Unknown">UNKNOWN</button>
                 </div>
                 
                 <div id="mod-search-container" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-                    <span class="filter-label" data-i18n="KK_AD_Viewer_SearchLabel">Search:</span>
-                    <input type="text" id="mod-search-input" placeholder="Filter by name or ID..." oninput="onModSearch()" style="background: #0d0d0a; color: #c7cb00; border: 1px solid #5a5b49; padding: 4px 8px; font-size: 11px; width: 200px;" data-i18n="KK_AD_Viewer_SearchPlaceholder">
+                    <span class="filter-label" data-i18n="KK_AL_Viewer_SearchLabel">Search:</span>
+                    <input type="text" id="mod-search-input" placeholder="Filter by name or ID..." oninput="onModSearch()" style="background: #0d0d0a; color: #c7cb00; border: 1px solid #5a5b49; padding: 4px 8px; font-size: 11px; width: 200px;" data-i18n="KK_AL_Viewer_SearchPlaceholder">
                 </div>
             </div>
             
             <div id="mod-list-headers" style="display: flex; gap: 20px; width: 100%; margin-top: 8px; border-top: 1px solid #2e2e26; padding-top: 4px;">
-                <h3 id="left-mod-header" style="margin: 0; padding: 0; font-size: 13px; flex: 1; border-bottom: none;" data-i18n="KK_AD_Viewer_YourModList">Your Mod List</h3>
-                <h3 id="right-mod-header" class="hidden" style="margin: 0; padding: 0; font-size: 13px; flex: 1; border-bottom: none;" data-i18n="KK_AD_Viewer_ComparedModList">Compared Mod List</h3>
+                <h3 id="left-mod-header" style="margin: 0; padding: 0; font-size: 13px; flex: 1; border-bottom: none;" data-i18n="KK_AL_Viewer_YourModList">Your Mod List</h3>
+                <h3 id="right-mod-header" class="hidden" style="margin: 0; padding: 0; font-size: 13px; flex: 1; border-bottom: none;" data-i18n="KK_AL_Viewer_ComparedModList">Compared Mod List</h3>
             </div>
         </div>
     </div>
@@ -135,41 +130,31 @@
         <!-- Help Panel -->
         <div id="help-panel">
             <div class="help-header">
-                <h3 data-i18n="KK_AD_Viewer_DiagIntel">Diagnostic Intelligence</h3>
+                <h3 data-i18n="KK_AL_Viewer_DiagIntel">Archotech Log Guide</h3>
                 <span class="close-help" onclick="toggleHelp(event)">&times;</span>
             </div>
             
             <div class="help-section" id="dynamic-legend-container">
-                <h4 data-i18n="KK_AD_Viewer_ColorLegend">Color Legend</h4>
+                <h4 data-i18n="KK_AL_Viewer_ColorLegend">Log Guide</h4>
                 <!-- Legend will load dynamically -->
             </div>
 
             <div class="help-section">
-                <h4 data-i18n="KK_AD_Viewer_WhatLookFor">What to look for?</h4>
-                <p data-i18n="KK_AD_Viewer_LookForDesc">Focus on Red and Deep Red entries in the Enhanced Log. These indicate where your game is actually failing to execute code. Check the 'Suspect' mod listed immediately above these errors.</p>
+                <h4 data-i18n="KK_AL_Viewer_WhatLookFor">What to look for?</h4>
+                <p data-i18n="KK_AL_Viewer_LookForDesc">Focus on Red and Deep Red entries in the Enhanced Log. These indicate where your game is actually failing to execute code. Check the 'Suspect' mod listed immediately above these errors.</p>
             </div>
 
             <div class="help-section">
-                <h4 data-i18n="KK_AD_Viewer_ConflictingMods">Conflicting Mods</h4>
-                <p data-i18n="KK_AD_Viewer_ConflictDesc">Orange messages usually denote two or more mods fighting over the same function. Check if you have multiple mods that try to change the same game mechanic.</p>
-            </div>
-
-            <div class="help-section">
-                <h4 data-i18n="KK_AD_Viewer_ModUpdates">Mod Updates</h4>
-                <div class="color-row"><div class="status-dot status-up-to-date" style="margin:0"></div> <span><b data-i18n="KK_AD_Viewer_GreenLabel">Green:</b> <span data-i18n="KK_AD_Viewer_GreenDesc">Mod is up to date with the latest Steam Workshop version.</span></span></div>
-                <div class="color-row"><div class="status-dot status-outdated" style="margin:0"></div> <span><b data-i18n="KK_AD_Viewer_RedLabel">Red:</b> <span data-i18n="KK_AD_Viewer_RedDesc">A newer version is available on Steam. Recommendation: Update your mods.</span></span></div>
-                <div class="color-row"><div class="status-dot status-unknown" style="margin:0"></div> <span><b data-i18n="KK_AD_Viewer_GrayLabel">Gray:</b> <span data-i18n="KK_AD_Viewer_GrayDesc">Unknown or Local mod. No Steam Workshop metadata available for comparison.</span></span></div>
-            </div>
-
-            <div class="help-section" id="diagnosis-legend-section">
-                <h4 data-i18n="KK_AD_DiagnosisLegend">Diagnosis Tag Legend</h4>
-                <div id="diagnosis-legend-container"></div>
+                <h4 data-i18n="KK_AL_Viewer_ModUpdates">Mod Updates</h4>
+                <div class="color-row"><div class="status-dot status-up-to-date" style="margin:0"></div> <span><b data-i18n="KK_AL_Viewer_GreenLabel">Green:</b> <span data-i18n="KK_AL_Viewer_GreenDesc">Mod is up to date with the latest Steam Workshop version.</span></span></div>
+                <div class="color-row"><div class="status-dot status-outdated" style="margin:0"></div> <span><b data-i18n="KK_AL_Viewer_RedLabel">Red:</b> <span data-i18n="KK_AL_Viewer_RedDesc">A newer version is available on Steam. Recommendation: Update your mods.</span></span></div>
+                <div class="color-row"><div class="status-dot status-unknown" style="margin:0"></div> <span><b data-i18n="KK_AL_Viewer_GrayLabel">Gray:</b> <span data-i18n="KK_AL_Viewer_GrayDesc">Unknown or Local mod. No Steam Workshop metadata available for comparison.</span></span></div>
             </div>
         </div>
 
         <div id="enhanced-log" class="content-area hidden"></div>
         <div id="session-log" class="content-area hidden"></div>
-        <div id="trace-report" class="content-area hidden"></div>
+
         <div id="mod-list" class="content-area hidden" style="padding-top: 10px;">
             <!-- Mod List Split Container -->
             <div id="mod-list-split-container" style="display: flex; gap: 20px; align-items: flex-start;">
@@ -187,13 +172,13 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th class="order" data-i18n="KK_AD_Viewer_Order">Order</th>
-                                <th data-i18n="KK_AD_Viewer_Image">Image</th>
-                                <th data-i18n="KK_AD_Viewer_ModName">Mod Name</th>
-                                <th style="text-align: center;" data-i18n="KK_AD_Viewer_Updated">Updated</th>
-                                <th data-i18n="KK_AD_Viewer_PackageID">Package ID</th>
-                                <th data-i18n="KK_AD_Viewer_Author">Author</th>
-                                <th data-i18n="KK_AD_Viewer_Versions">Versions</th>
+                                <th class="order" data-i18n="KK_AL_Viewer_Order">Order</th>
+                                <th data-i18n="KK_AL_Viewer_Image">Image</th>
+                                <th data-i18n="KK_AL_Viewer_ModName">Mod Name</th>
+                                <th style="text-align: center;" data-i18n="KK_AL_Viewer_Updated">Updated</th>
+                                <th data-i18n="KK_AL_Viewer_PackageID">Package ID</th>
+                                <th data-i18n="KK_AL_Viewer_Author">Author</th>
+                                <th data-i18n="KK_AL_Viewer_Versions">Versions</th>
                             </tr>
                         </thead>
                         <tbody id="mod-table-body"></tbody>
@@ -202,7 +187,7 @@
 
                 <!-- Right side: Their Mods -->
                 <div id="mod-list-right" class="hidden" style="flex: 1; overflow-x: auto; width: 100%;">
-                    <div id="compare-loading" class="hidden" style="color: #c7cb00; padding: 10px;" data-i18n="KK_AD_Viewer_FetchingMods">Fetching mod list data...</div>
+                    <div id="compare-loading" class="hidden" style="color: #c7cb00; padding: 10px;" data-i18n="KK_AL_Viewer_FetchingMods">Fetching mod list data...</div>
                     <div id="compare-error" class="hidden" style="color: #ff4d4d; padding: 10px; background: #2a1111; border: 1px solid #cc3333;"></div>
                     <table id="mod-table-compare-wrapper" class="hidden" style="table-layout: fixed;">
                         <colgroup>
@@ -216,13 +201,13 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th class="order" data-i18n="KK_AD_Viewer_Order">Order</th>
-                                <th data-i18n="KK_AD_Viewer_Image">Image</th>
-                                <th data-i18n="KK_AD_Viewer_ModName">Mod Name</th>
-                                <th style="text-align: center;" data-i18n="KK_AD_Viewer_Updated">Updated</th>
-                                <th data-i18n="KK_AD_Viewer_PackageID">Package ID</th>
-                                <th data-i18n="KK_AD_Viewer_Author">Author</th>
-                                <th data-i18n="KK_AD_Viewer_Versions">Versions</th>
+                                <th class="order" data-i18n="KK_AL_Viewer_Order">Order</th>
+                                <th data-i18n="KK_AL_Viewer_Image">Image</th>
+                                <th data-i18n="KK_AL_Viewer_ModName">Mod Name</th>
+                                <th style="text-align: center;" data-i18n="KK_AL_Viewer_Updated">Updated</th>
+                                <th data-i18n="KK_AL_Viewer_PackageID">Package ID</th>
+                                <th data-i18n="KK_AL_Viewer_Author">Author</th>
+                                <th data-i18n="KK_AL_Viewer_Versions">Versions</th>
                             </tr>
                         </thead>
                         <tbody id="mod-table-body-compare"></tbody>
@@ -233,14 +218,7 @@
         <div id="ai-json" class="content-area hidden" style="color:#ffffff;"></div>
         <!-- Player.log: always white plaintext, note at top added by JS when loaded -->
         <div id="player-log" class="content-area hidden" style="color:#ffffff;"></div>
-        <div id="load-time" class="content-area hidden">
-            <div class="note-box" style="margin-bottom: 20px;">
-                <strong>⚠️ How to read this leaderboard:</strong><br>
-                This ranks mods by their <strong>Total Composite Impact</strong> (C# Code Execution + XML Size + Asset Megabytes). <br>
-                Because Unity loads graphics in the background, this leaderboard uses a mathematical estimate to rank mods accurately, and is <strong>NOT a precise time measurement</strong> of each mod's actual load time!
-            </div>
-        </div>
-        <div id="perf-scan" class="content-area hidden"></div>
+
     </div>
 
     <!-- Data source -->
@@ -254,3 +232,5 @@
 
 </body>
 </html>
+
+
